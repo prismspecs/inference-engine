@@ -1,0 +1,7 @@
+/bin/
+/obj/
+*-workspace
+update_lib.sh
+config.make
+Makefile
+.vscode/
