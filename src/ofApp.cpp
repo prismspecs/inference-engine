@@ -7,7 +7,7 @@ void ofApp::setup()
     //uncomment the following line if you want a verbose log (which means a lot of info will be printed)
     ofSetLogLevel(OF_LOG_VERBOSE);
 
-    ofSetWindowShape(1024, 1024);
+    ofSetWindowShape(1024, 512);
 
     // setup Runway
     runway.setup(this, "http://localhost:8000");
@@ -25,7 +25,8 @@ void ofApp::setup()
         hat.push_back(i);
     }
 
-    for(int i = 0; i < num_isolated; i++) {
+    for (int i = 0; i < num_isolated; i++)
+    {
         // select from hat
         int picked = int(ofRandom(hat.size()));
         isolate_vectors.push_back(hat[picked]);
@@ -35,8 +36,13 @@ void ofApp::setup()
     }
 
     cout << endl;
+
+    generate_image(target_position, truncation);
     
-    generate_image(starting_position, truncation);
+    // create image for destination
+    runway.get("image", targetImg);
+    bWaitingForTarget = true;
+    
 
 
     // setup gui
@@ -54,14 +60,21 @@ void ofApp::setup()
     // sliderGroup.add(floatSlider[0].set("float slider", 32, 32, 256));
 
     gui.setup(sliderGroup);
-
 }
 //--------------------------------------------------------------
 void ofApp::update()
 {
-    if (bWaitingForResponse)
+    if(bWaitingForTarget)
     {
-        runway.get("image", runwayResult);
+        runway.get("image", targetImg);
+
+        if(targetImg.isAllocated())
+            bWaitingForTarget = false;
+    }
+    if (!bWaitingForTarget && bWaitingForResponse)
+    {
+        runway.get("image", currentImg);
+        bWaitingForResponse = false;
     }
 
     // using GUI
@@ -78,22 +91,35 @@ void ofApp::update()
     randZ[9] = vec9;
 
     generate_image(randZ, truncation);
+
 }
 //--------------------------------------------------------------
 void ofApp::draw()
 {
-    // draw image received from Runway
-    if (runwayResult.isAllocated())
+    // draw target location image
+        // draw image received from Runway
+    if (targetImg.isAllocated())
     {
-        runwayResult.draw(0, 0);
+        targetImg.draw(512, 0);
+    }
+
+    // draw image received from Runway
+    if (currentImg.isAllocated())
+    {
+        currentImg.draw(0, 0);
     }
 
     // draw runway's status. It returns the bounding box of the drawn text. It is useful so you can draw other stuff and avoid overlays
-    ofRectangle r = runway.drawStatus(620, 440, true);
-
-    ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
+    // ofRectangle r = runway.drawStatus(620, 440, true);
+    // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
 
     gui.draw();
+
+    // save frame
+    string fn = ofToString(ofGetFrameNum(),4,'0')+".png";
+    cout << fn << endl;
+
+    ofSaveScreen(fn);
 }
 
 //--------------------------------------------------------------

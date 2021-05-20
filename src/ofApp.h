@@ -16,7 +16,8 @@ public:
 		
 	ofxRunway runway;
 	
-	ofImage runwayResult;
+	ofImage currentImg;
+	ofImage targetImg;
 		
 	vector<float> generate_random_z();
 	void generate_image(vector<float> z, float truncation);
@@ -26,6 +27,7 @@ public:
 	void runwayErrorEvent(string& message);
 	
 	bool bWaitingForResponse = false;
+	bool bWaitingForTarget = false;
 
 	// gui
 	ofxPanel gui;
@@ -40,9 +42,6 @@ public:
 	ofParameter<float> vec7;
 	ofParameter<float> vec8;
 	ofParameter<float> vec9;
-	// ofParameter<float> vec10;
-	// ofParameter<float> vec11;
-	// ofParameter<float> vec12;
 
 	// vector<ofParameter<float>> floatSlider;
 
