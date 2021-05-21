@@ -7,7 +7,7 @@ void ofApp::setup()
     //uncomment the following line if you want a verbose log (which means a lot of info will be printed)
     // ofSetLogLevel(OF_LOG_VERBOSE);
 
-    ofSetWindowShape(1024, 512);
+    ofSetWindowShape(img_dims * 2, img_dims);
 
     // setup Runway
     runway.setup(this, "http://localhost:8000");
@@ -90,7 +90,7 @@ void ofApp::draw()
     // draw image received from Runway
     if (targetImg.isAllocated())
     {
-        targetImg.draw(512, 0);
+        targetImg.draw(img_dims, 0);
     }
 
     // draw image received from Runway

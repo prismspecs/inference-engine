@@ -2,7 +2,7 @@
 
 #include "ofMain.h"
 #include "ofxRunway.h"
-#include "ofxGui.h"
+#include "ofxGui.h" 
 
 // make sure you make your ofApp or class to inherit from ofxRunwayListener
 class ofApp : public ofBaseApp, public ofxRunwayListener{
@@ -42,11 +42,12 @@ public:
 
 
 	// game variables
-	float truncation = 1.5;
-	float min_max_vecs = 5;
+	int img_dims = 1024;
+	float truncation = 1.1;
+	float min_max_vecs = 1;
 	vector<float> starting_position;
 	vector<float> current_position;
 	vector<float> target_position;
 	vector<int> isolate_vectors;
-	int num_isolated = 10;
+	int num_isolated = 50;
 };
