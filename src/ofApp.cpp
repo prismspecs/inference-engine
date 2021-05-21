@@ -5,7 +5,7 @@
 void ofApp::setup()
 {
     //uncomment the following line if you want a verbose log (which means a lot of info will be printed)
-    ofSetLogLevel(OF_LOG_VERBOSE);
+    // ofSetLogLevel(OF_LOG_VERBOSE);
 
     ofSetWindowShape(1024, 512);
 
@@ -15,7 +15,7 @@ void ofApp::setup()
 
     // set up game
     starting_position = generate_random_z();
-    target_position = generate_random_z();
+    current_position = starting_position;
 
     // decide which vectors will be in play this round
     isolate_vectors.clear();
@@ -37,38 +37,41 @@ void ofApp::setup()
 
     cout << endl;
 
+    // generate a new target based on which input vectors should be frozen
+    target_position = generate_new_target(starting_position, isolate_vectors);
+
     generate_image(target_position, truncation);
-    
+
     // create image for destination
     runway.get("image", targetImg);
     bWaitingForTarget = true;
-    
-
 
     // setup gui
     sliderGroup.setName("sliders");
-    sliderGroup.add(vec0.set("vec 0", 0, -5, 5));
-    sliderGroup.add(vec1.set("vec 1", 0, -5, 5));
-    sliderGroup.add(vec2.set("vec 2", 0, -5, 5));
-    sliderGroup.add(vec3.set("vec 3", 0, -5, 5));
-    sliderGroup.add(vec4.set("vec 4", 0, -5, 5));
-    sliderGroup.add(vec5.set("vec 5", 0, -5, 5));
-    sliderGroup.add(vec6.set("vec 6", 0, -5, 5));
-    sliderGroup.add(vec7.set("vec 7", 0, -5, 5));
-    sliderGroup.add(vec8.set("vec 8", 0, -5, 5));
-    sliderGroup.add(vec9.set("vec 9", 0, -5, 5));
-    // sliderGroup.add(floatSlider[0].set("float slider", 32, 32, 256));
+    for (size_t i{0}; i < num_isolated; ++i)
+    {
+        ofParameter<float> p;
+        std::string name = "vec ";
+        name += to_string(i);
+        p.set(name, 0, -min_max_vecs, min_max_vecs);
+        // p.addListener(this, &ofApp::control_changed);
 
+        vecs.push_back(p);
+        sliderGroup.add(vecs.at(i));
+        
+    }
+    // add listener for the controls so we only update when necessary
+    ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
     gui.setup(sliderGroup);
 }
 //--------------------------------------------------------------
 void ofApp::update()
 {
-    if(bWaitingForTarget)
+    if (bWaitingForTarget)
     {
         runway.get("image", targetImg);
 
-        if(targetImg.isAllocated())
+        if (targetImg.isAllocated())
             bWaitingForTarget = false;
     }
     if (!bWaitingForTarget && bWaitingForResponse)
@@ -78,26 +81,13 @@ void ofApp::update()
     }
 
     // using GUI
-    vector<float> randZ = starting_position;
-    randZ[0] = vec0;
-    randZ[1] = vec1;
-    randZ[2] = vec2;
-    randZ[3] = vec3;
-    randZ[4] = vec4;
-    randZ[5] = vec5;
-    randZ[6] = vec6;
-    randZ[7] = vec7;
-    randZ[8] = vec8;
-    randZ[9] = vec9;
-
-    generate_image(randZ, truncation);
-
+    // vector<float> randZ = starting_position;
 }
 //--------------------------------------------------------------
 void ofApp::draw()
 {
     // draw target location image
-        // draw image received from Runway
+    // draw image received from Runway
     if (targetImg.isAllocated())
     {
         targetImg.draw(512, 0);
@@ -113,13 +103,23 @@ void ofApp::draw()
     // ofRectangle r = runway.drawStatus(620, 440, true);
     // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
 
+    // draw distance
+    ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
+    ofSetColor(0);
+    ofDrawRectangle(r);
+    string diststr = ofToString(find_distance(target_position, current_position));
+    ofSetColor(255);
+    ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
+
+    // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
+
     gui.draw();
 
     // save frame
-    string fn = ofToString(ofGetFrameNum(),4,'0')+".png";
-    cout << fn << endl;
+    // string fn = ofToString(ofGetFrameNum(),4,'0')+".png";
+    // cout << fn << endl;
 
-    ofSaveScreen(fn);
+    // ofSaveScreen(fn);
 }
 
 //--------------------------------------------------------------
@@ -131,6 +131,18 @@ void ofApp::keyReleased(int key)
         generate_image(generate_random_z(), truncation);
     }
 }
+//--------------------------------------------------------------
+void ofApp::control_changed(ofAbstractParameter& e)
+{
+    for (size_t i{0}; i < num_isolated; ++i)
+    {
+        current_position[i] = vecs.at(i);
+    }
+
+    generate_image(current_position, truncation);
+
+    cout << find_distance(target_position, current_position) << endl;
+}
 
 //--------------------------------------------------------------
 vector<float> ofApp::generate_random_z()
@@ -139,7 +151,7 @@ vector<float> ofApp::generate_random_z()
     vector<float> z; // create an empty vector of floats
     for (int i = 0; i < 512; i++)
     {
-        z.push_back(ofRandom(-1, 1));
+        z.push_back(ofRandom(-min_max_vecs, min_max_vecs));
     }
 
     return z;
@@ -161,7 +173,33 @@ void ofApp::generate_image(vector<float> z, float truncation)
 
     bWaitingForResponse = true;
 }
+//--------------------------------------------------------------
+vector<float> ofApp::generate_new_target(vector<float> startPos, vector<int> iso_vecs)
+{
+    vector<float> target = startPos;
 
+    // target position should only randomize the isolated controllable vectors
+    for (int i = 0; i < iso_vecs.size(); i++)
+    {
+        target[iso_vecs[i]] = ofRandom(-min_max_vecs, min_max_vecs);
+    }
+
+    return target;
+}
+//--------------------------------------------------------------
+float ofApp::find_distance(vector<float> a, vector<float> b)
+{
+    float total_diff = 0;
+    for (int i = 0; i < a.size(); i++)
+    {
+        float difference = pow(abs(a[i] - b[i]), 2);
+        total_diff += difference;
+    }
+
+    float root_diff = sqrt(total_diff);
+
+    return root_diff;
+}
 // Runway sends information about the current model
 //--------------------------------------------------------------
 void ofApp::runwayInfoEvent(ofJson &info)
