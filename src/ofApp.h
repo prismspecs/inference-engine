@@ -42,7 +42,7 @@ public:
 
 
 	// game variables
-	int img_dims = 1024;
+	int img_dims = 512;
 	float truncation = 1.1;
 	float min_max_vecs = 1;
 	vector<float> starting_position;
