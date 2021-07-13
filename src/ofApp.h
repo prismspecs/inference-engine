@@ -49,5 +49,5 @@ public:
 	vector<float> current_position;
 	vector<float> target_position;
 	vector<int> isolate_vectors;
-	int num_isolated = 50;
+	int num_isolated = 12;
 };
