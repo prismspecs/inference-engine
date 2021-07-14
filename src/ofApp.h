@@ -11,8 +11,10 @@ public:
 	void setup();
 	void update();
 	void draw();
+	void newPosition();
 	
 	void keyReleased(int key);
+	void keyPressed(int key);
 		
 	ofxRunway runway;
 	
@@ -43,7 +45,7 @@ public:
 
 	// game variables
 	int img_dims = 512;
-	float truncation = 1.1;
+	float truncation = 1;
 	float min_max_vecs = 1;
 	vector<float> starting_position;
 	vector<float> current_position;

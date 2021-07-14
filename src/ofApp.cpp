@@ -13,39 +13,6 @@ void ofApp::setup()
     runway.setup(this, "http://localhost:8000");
     runway.start();
 
-    // set up game
-    starting_position = generate_random_z();
-    current_position = starting_position;
-
-    // decide which vectors will be in play this round
-    isolate_vectors.clear();
-    vector<int> hat;
-    for (int i = 0; i < 512; i++)
-    {
-        hat.push_back(i);
-    }
-
-    for (int i = 0; i < num_isolated; i++)
-    {
-        // select from hat
-        int picked = int(ofRandom(hat.size()));
-        isolate_vectors.push_back(hat[picked]);
-        hat.erase(hat.begin() + picked);
-
-        cout << picked;
-    }
-
-    cout << endl;
-
-    // generate a new target based on which input vectors should be frozen
-    target_position = generate_new_target(starting_position, isolate_vectors);
-
-    generate_image(target_position, truncation);
-
-    // create image for destination
-    runway.get("image", targetImg);
-    bWaitingForTarget = true;
-
     // setup gui
     sliderGroup.setName("sliders");
     for (size_t i{0}; i < num_isolated; ++i)
@@ -58,30 +25,35 @@ void ofApp::setup()
 
         vecs.push_back(p);
         sliderGroup.add(vecs.at(i));
-        
     }
     // add listener for the controls so we only update when necessary
     ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
     gui.setup(sliderGroup);
+
+    // set up game
+    newPosition();
 }
 //--------------------------------------------------------------
 void ofApp::update()
 {
+    //cout << runway.isBusy() << endl;
+
     if (bWaitingForTarget)
     {
         runway.get("image", targetImg);
+        //cout << "getting target image" << endl;
 
         if (targetImg.isAllocated())
             bWaitingForTarget = false;
     }
     if (!bWaitingForTarget && bWaitingForResponse)
     {
-        runway.get("image", currentImg);
-        bWaitingForResponse = false;
+        // need logic here for... if there is no image to get yet
+        if(!runway.isBusy()) {
+            runway.get("image", currentImg);
+            bWaitingForResponse = false;
+        }
     }
-
-    // using GUI
-    // vector<float> randZ = starting_position;
 }
 //--------------------------------------------------------------
 void ofApp::draw()
@@ -121,7 +93,43 @@ void ofApp::draw()
 
     // ofSaveScreen(fn);
 }
+//--------------------------------------------------------------
+void ofApp::newPosition()
+{
+    starting_position = generate_random_z();
+    current_position = starting_position;
 
+    // decide which vectors will be in play this round
+    isolate_vectors.clear();
+    vector<int> hat;
+    for (int i = 0; i < 512; i++)
+    {
+        hat.push_back(i);
+    }
+
+    // cout << "isolated vectors are ";
+
+    for (int i = 0; i < num_isolated; i++)
+    {
+        // select from hat
+        int picked = int(ofRandom(hat.size()));
+        isolate_vectors.push_back(hat[picked]);
+        hat.erase(hat.begin() + picked);
+
+        // cout << picked << ", ";
+    }
+
+    // cout << endl;
+
+    // generate a new target based on which input vectors should be frozen
+    target_position = generate_new_target(starting_position, isolate_vectors);
+
+    generate_image(target_position, truncation);
+
+    // create image for destination
+    bWaitingForTarget = true;
+    runway.get("image", targetImg);
+}
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key)
 {
@@ -132,16 +140,51 @@ void ofApp::keyReleased(int key)
     }
 }
 //--------------------------------------------------------------
-void ofApp::control_changed(ofAbstractParameter& e)
+void ofApp::keyPressed(int key)
+{
+
+    if (key == 'x')
+    {
+        // move all sliders to correct values immediately
+        for (size_t i{0}; i < num_isolated; ++i)
+        {
+            vecs.at(i).set(target_position[isolate_vectors[i]]);
+        }
+
+        generate_image(current_position, truncation);
+    }
+
+    if (key == 'c')
+    {
+        // move all sliders to correct values slowly
+        for (size_t i{0}; i < num_isolated; ++i)
+        {
+            float lerped = ofLerp(vecs.at(i), target_position[isolate_vectors[i]], .1);
+            vecs.at(i).set(lerped);
+        }
+
+        generate_image(current_position, truncation);
+    }
+
+    if (key == 'n')
+    {
+        // reset game
+        newPosition();
+    }
+}
+//--------------------------------------------------------------
+void ofApp::control_changed(ofAbstractParameter &e)
 {
     for (size_t i{0}; i < num_isolated; ++i)
     {
-        current_position[i] = vecs.at(i);
+        // change the associated isolated vector
+        current_position[isolate_vectors[i]] = vecs.at(i);
+        //current_position[i] = vecs.at(i); // OOPS! this was wrong
     }
 
     generate_image(current_position, truncation);
 
-    cout << find_distance(target_position, current_position) << endl;
+    //cout << find_distance(target_position, current_position) << endl;
 }
 
 //--------------------------------------------------------------
@@ -163,7 +206,10 @@ void ofApp::generate_image(vector<float> z, float truncation)
     // skip if content image isn't loaded yet
 
     if (runway.isBusy())
+    {
         return;
+        cout << "runway was busy" << endl;
+    }
 
     ofxRunwayData data;
     data.setFloats("z", z);
