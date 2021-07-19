@@ -40,18 +40,28 @@ void ofApp::update()
 
     if (bWaitingForTarget)
     {
-        runway.get("image", targetImg);
+        ofxRunwayData dataToReceive;
+        while (runway.tryReceive(dataToReceive))
+        {
+            dataToReceive.getImage("image", targetImg);
+            targetImg.update();
+        }
+
+        // runway.get("image", targetImg);
         //cout << "getting target image" << endl;
 
         if (targetImg.isAllocated())
             bWaitingForTarget = false;
     }
+
     if (!bWaitingForTarget && bWaitingForResponse)
     {
-        // need logic here for... if there is no image to get yet
-        if(!runway.isBusy()) {
+        if (!runway.isBusy())
+        {
+            // need logic here for... if there is no image to get yet
+            //cout << runway.get("image", currentImg) << endl;
             runway.get("image", currentImg);
-            bWaitingForResponse = false;
+            //bWaitingForResponse = false;    // consider removing/replacing?
         }
     }
 }
@@ -124,11 +134,12 @@ void ofApp::newPosition()
     // generate a new target based on which input vectors should be frozen
     target_position = generate_new_target(starting_position, isolate_vectors);
 
+    bWaitingForTarget = true;
+
     generate_image(target_position, truncation);
 
     // create image for destination
-    bWaitingForTarget = true;
-    runway.get("image", targetImg);
+    // runway.get("image", targetImg);
 }
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key)

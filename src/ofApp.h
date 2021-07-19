@@ -42,7 +42,6 @@ public:
 
 	// vector<ofParameter<float>> floatSlider;
 
-
 	// game variables
 	int img_dims = 512;
 	float truncation = 1;
