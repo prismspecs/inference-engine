@@ -36,6 +36,9 @@ void ofApp::setup()
 //--------------------------------------------------------------
 void ofApp::update()
 {
+    // update distance
+    distance = find_distance(target_position, current_position);
+
     //cout << runway.isBusy() << endl;
 
     if (bWaitingForTarget)
@@ -78,7 +81,10 @@ void ofApp::draw()
     // draw image received from Runway
     if (currentImg.isAllocated())
     {
-        currentImg.draw(0, 0);
+        // currentImg.draw(0, 0);
+
+        make_mesh(currentImg).draw();
+        draw_stars(currentImg);
     }
 
     // draw runway's status. It returns the bounding box of the drawn text. It is useful so you can draw other stuff and avoid overlays
@@ -89,7 +95,7 @@ void ofApp::draw()
     ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
     ofSetColor(0);
     ofDrawRectangle(r);
-    string diststr = ofToString(find_distance(target_position, current_position));
+    string diststr = ofToString(distance);
     ofSetColor(255);
     ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
 
@@ -256,6 +262,64 @@ float ofApp::find_distance(vector<float> a, vector<float> b)
     float root_diff = sqrt(total_diff);
 
     return root_diff;
+}
+//--------------------------------------------------------------
+ofMesh ofApp::make_mesh(ofImage image)
+{
+    ofMesh mesh;
+
+    mesh.setMode(OF_PRIMITIVE_POINTS);
+    mesh.enableColors();
+
+    float intensityThreshold = 0.0;
+
+    int w = image.getWidth();
+    int h = image.getHeight();
+
+    for (int x = 0; x < w; ++x)
+    {
+        for (int y = 0; y < h; ++y)
+        {
+            ofColor c = image.getColor(x, y);
+            float intensity = c.getLightness();
+            if (intensity >= intensityThreshold)
+            {
+                ofVec3f pos(x, y, intensity * .1 * distance);
+                mesh.addVertex(pos);
+                // When addColor(...), the mesh will automatically convert
+                // the ofColor to an ofFloatColor
+                mesh.addColor(c);
+            }
+        }
+    }
+
+    return mesh;
+}
+//--------------------------------------------------------------
+void ofApp::draw_stars(ofImage image)
+{
+
+    int w = image.getWidth();
+    int h = image.getHeight();
+
+    
+
+    for (int x = 0; x < w; x+=21)
+    {
+        for (int y = 0; y < h; y+=21)
+        {
+            ofColor c = image.getColor(x, y);
+            ofSetColor(c);
+
+            float phase = sin(ofGetElapsedTimeMillis() * .0001 + x * .01);
+            float n = ofNoise(x + ofGetElapsedTimeMillis() * .0001,y + ofGetElapsedTimeMillis() * .0001);
+            
+            ofVec3f pos(x, y, n * 100);
+
+            ofDrawRectangle(pos,3,3);
+
+        }
+    }
 }
 // Runway sends information about the current model
 //--------------------------------------------------------------

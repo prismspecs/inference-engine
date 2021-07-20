@@ -15,6 +15,11 @@ public:
 	
 	void keyReleased(int key);
 	void keyPressed(int key);
+
+	// effects
+	ofMesh make_mesh(ofImage image);
+	void draw_stars(ofImage image);
+	
 		
 	ofxRunway runway;
 	
@@ -51,4 +56,6 @@ public:
 	vector<float> target_position;
 	vector<int> isolate_vectors;
 	int num_isolated = 12;
+
+	float distance = 0.0;	// how far from destination
 };
