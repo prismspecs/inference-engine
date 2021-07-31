@@ -48,14 +48,14 @@ public:
 	// vector<ofParameter<float>> floatSlider;
 
 	// game variables
-	int img_dims = 512;
+	int img_dims = 1024;
 	float truncation = 1;
 	float min_max_vecs = 1;
 	vector<float> starting_position;
 	vector<float> current_position;
 	vector<float> target_position;
 	vector<int> isolate_vectors;
-	int num_isolated = 12;
+	int num_isolated = 18;
 
 	float distance = 0.0;	// how far from destination
 };
