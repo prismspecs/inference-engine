@@ -1,5 +1,5 @@
+runway-python==0.6.1
+tensorflow-gpu==1.15.0
 h5py==2.9.0
 requests==2.21.0
-runway-python
-tensorflow-gpu==1.15.0
-scipy
+#scipy
