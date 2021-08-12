@@ -13,9 +13,9 @@ git clone https://github.com/bakercp/ofxSSLManager.git
 # hosting on runway
 + Hosting on Runway requires runway_model.py, runway.yml. 
 + I then set up a virtualenv using [these instructions](https://gist.github.com/frfahim/73c0fad6350332cef7a653bcd762f08d)
-+ first download python 3.7 https://linuxize.com/post/how-to-install-python-3-7-on-ubuntu-18-04/
++ first download python 3.6 https://linuxize.com/post/how-to-install-python-3-7-on-ubuntu-18-04/
 ```
-virtualenv -p /usr/bin/python3.7 venv
+virtualenv -p /usr/bin/python3.6 venv
 source venv/bin/activate
 # fix some error, install dnnlib manually
 pip install https://github.com/podgorskiy/dnnlib/releases/download/0.0.1/dnnlib-0.0.1-py3-none-any.whl
