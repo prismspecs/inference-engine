@@ -32,6 +32,8 @@ void ofApp::setup()
 
     // set up game
     newPosition();
+
+    //targetImg.allocate(1024,1024,OF_IMAGE_COLOR);
 }
 //--------------------------------------------------------------
 void ofApp::update()
@@ -41,32 +43,65 @@ void ofApp::update()
 
     //cout << runway.isBusy() << endl;
 
-    if (bWaitingForTarget)
+    for (int i = 0; i < next_image_loc.size(); i++)
     {
+        cout << i << ", " << next_image_loc[i] << endl;
+    }
+
+    if (next_image_loc.size() > 0)
+    {
+
         ofxRunwayData dataToReceive;
+        // bool is_data = runway.tryReceive(dataToReceive);
+        // cout << "is there data? " << is_data << endl;
+
         while (runway.tryReceive(dataToReceive))
         {
-            dataToReceive.getImage("image", targetImg);
-            targetImg.update();
-        }
 
-        // runway.get("image", targetImg);
-        //cout << "getting target image" << endl;
+            if (next_image_loc[0] == CURRENT_IMAGE)
+            {
+                dataToReceive.getImage("image", currentImg);
+                currentImg.update();
+            }
+            else if (next_image_loc[0] == TARGET_IMAGE)
+            {
+                cout << "placing target" << endl;
 
-        if (targetImg.isAllocated())
-            bWaitingForTarget = false;
-    }
+                dataToReceive.getImage("image", targetImg);
+                targetImg.update();
+            }
 
-    if (!bWaitingForTarget && bWaitingForResponse)
-    {
-        if (!runway.isBusy())
-        {
-            // need logic here for... if there is no image to get yet
-            //cout << runway.get("image", currentImg) << endl;
-            runway.get("image", currentImg);
-            //bWaitingForResponse = false;    // consider removing/replacing?
+            // erase this entry
+            next_image_loc.erase(next_image_loc.begin());
         }
     }
+
+    // if (bWaitingForTarget)
+    // {
+    //     ofxRunwayData dataToReceive;
+    //     while (runway.tryReceive(dataToReceive))
+    //     {
+    //         dataToReceive.getImage("image", targetImg);
+    //         targetImg.update();
+    //     }
+
+    //     // runway.get("image", targetImg);
+    //     //cout << "getting target image" << endl;
+
+    //     if (targetImg.isAllocated())
+    //         bWaitingForTarget = false;
+    // }
+
+    // if (!bWaitingForTarget && bWaitingForResponse)
+    // {
+    //     if (!runway.isBusy())
+    //     {
+    //         // need logic here for... if there is no image to get yet
+    //         //cout << runway.get("image", currentImg) << endl;
+    //         runway.get("image", currentImg);
+    //         //bWaitingForResponse = false;    // consider removing/replacing?
+    //     }
+    // }
 }
 //--------------------------------------------------------------
 void ofApp::draw()
@@ -81,10 +116,10 @@ void ofApp::draw()
     // draw image received from Runway
     if (currentImg.isAllocated())
     {
-        // currentImg.draw(0, 0);
+        currentImg.draw(0, 0);
 
-        make_mesh(currentImg).draw();
-        draw_stars(currentImg);
+        // make_mesh(currentImg).draw();
+        // draw_stars(currentImg);
     }
 
     // draw runway's status. It returns the bounding box of the drawn text. It is useful so you can draw other stuff and avoid overlays
@@ -142,7 +177,7 @@ void ofApp::newPosition()
 
     bWaitingForTarget = true;
 
-    generate_image(target_position, truncation);
+    generate_image(target_position, truncation, TARGET_IMAGE);
 
     // create image for destination
     // runway.get("image", targetImg);
@@ -153,7 +188,7 @@ void ofApp::keyReleased(int key)
 
     if (key == ' ')
     {
-        generate_image(generate_random_z(), truncation);
+        generate_image(generate_random_z(), truncation, CURRENT_IMAGE);
     }
 }
 //--------------------------------------------------------------
@@ -168,7 +203,7 @@ void ofApp::keyPressed(int key)
             vecs.at(i).set(target_position[isolate_vectors[i]]);
         }
 
-        generate_image(current_position, truncation);
+        generate_image(current_position, truncation, CURRENT_IMAGE);
     }
 
     if (key == 'c')
@@ -180,7 +215,7 @@ void ofApp::keyPressed(int key)
             vecs.at(i).set(lerped);
         }
 
-        generate_image(current_position, truncation);
+        generate_image(current_position, truncation, CURRENT_IMAGE);
     }
 
     if (key == 'n')
@@ -199,7 +234,7 @@ void ofApp::control_changed(ofAbstractParameter &e)
         //current_position[i] = vecs.at(i); // OOPS! this was wrong
     }
 
-    generate_image(current_position, truncation);
+    generate_image(current_position, truncation, CURRENT_IMAGE);
 
     //cout << find_distance(target_position, current_position) << endl;
 }
@@ -218,8 +253,11 @@ vector<float> ofApp::generate_random_z()
 }
 
 //--------------------------------------------------------------
-void ofApp::generate_image(vector<float> z, float truncation)
+void ofApp::generate_image(vector<float> z, float truncation, int next_loc)
 {
+
+    cout << "generating image" << endl;
+
     // skip if content image isn't loaded yet
 
     if (runway.isBusy())
@@ -235,6 +273,9 @@ void ofApp::generate_image(vector<float> z, float truncation)
     runway.send(data);
 
     bWaitingForResponse = true;
+
+    // add 'where this image will go' to the stack so it gets placed properly later
+    next_image_loc.push_back(next_loc);
 }
 //--------------------------------------------------------------
 vector<float> ofApp::generate_new_target(vector<float> startPos, vector<int> iso_vecs)
@@ -302,22 +343,19 @@ void ofApp::draw_stars(ofImage image)
     int w = image.getWidth();
     int h = image.getHeight();
 
-    
-
-    for (int x = 0; x < w; x+=21)
+    for (int x = 0; x < w; x += 21)
     {
-        for (int y = 0; y < h; y+=21)
+        for (int y = 0; y < h; y += 21)
         {
             ofColor c = image.getColor(x, y);
             ofSetColor(c);
 
             float phase = sin(ofGetElapsedTimeMillis() * .0001 + x * .01);
-            float n = ofNoise(x + ofGetElapsedTimeMillis() * .0001,y + ofGetElapsedTimeMillis() * .0001);
-            
+            float n = ofNoise(x + ofGetElapsedTimeMillis() * .0001, y + ofGetElapsedTimeMillis() * .0001);
+
             ofVec3f pos(x, y, n * 100);
 
-            ofDrawRectangle(pos,3,3);
-
+            ofDrawRectangle(pos, 3, 3);
         }
     }
 }
