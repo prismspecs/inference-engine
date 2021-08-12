@@ -41,28 +41,29 @@ void ofApp::update()
     // update distance
     distance = find_distance(target_position, current_position);
 
-    //cout << runway.isBusy() << endl;
-
-    for (int i = 0; i < next_image_loc.size(); i++)
-    {
-        cout << i << ", " << next_image_loc[i] << endl;
-    }
+    // debugging the image request stack
+    // for (int i = 0; i < next_image_loc.size(); i++)
+    // {
+    //     cout << i << ", " << next_image_loc[i] << endl;
+    // }
 
     if (next_image_loc.size() > 0)
     {
 
+        // check if there is data to receive
         ofxRunwayData dataToReceive;
         // bool is_data = runway.tryReceive(dataToReceive);
         // cout << "is there data? " << is_data << endl;
 
         while (runway.tryReceive(dataToReceive))
         {
-
+            // are we waiting for a 'current' image?
             if (next_image_loc[0] == CURRENT_IMAGE)
             {
                 dataToReceive.getImage("image", currentImg);
                 currentImg.update();
             }
+            // are we waiting for a 'target' image?
             else if (next_image_loc[0] == TARGET_IMAGE)
             {
                 cout << "placing target" << endl;
@@ -76,32 +77,6 @@ void ofApp::update()
         }
     }
 
-    // if (bWaitingForTarget)
-    // {
-    //     ofxRunwayData dataToReceive;
-    //     while (runway.tryReceive(dataToReceive))
-    //     {
-    //         dataToReceive.getImage("image", targetImg);
-    //         targetImg.update();
-    //     }
-
-    //     // runway.get("image", targetImg);
-    //     //cout << "getting target image" << endl;
-
-    //     if (targetImg.isAllocated())
-    //         bWaitingForTarget = false;
-    // }
-
-    // if (!bWaitingForTarget && bWaitingForResponse)
-    // {
-    //     if (!runway.isBusy())
-    //     {
-    //         // need logic here for... if there is no image to get yet
-    //         //cout << runway.get("image", currentImg) << endl;
-    //         runway.get("image", currentImg);
-    //         //bWaitingForResponse = false;    // consider removing/replacing?
-    //     }
-    // }
 }
 //--------------------------------------------------------------
 void ofApp::draw()
@@ -211,7 +186,7 @@ void ofApp::keyPressed(int key)
         // move all sliders to correct values slowly
         for (size_t i{0}; i < num_isolated; ++i)
         {
-            float lerped = ofLerp(vecs.at(i), target_position[isolate_vectors[i]], .1);
+            float lerped = ofLerp(vecs.at(i), target_position[isolate_vectors[i]], .02);
             vecs.at(i).set(lerped);
         }
 
