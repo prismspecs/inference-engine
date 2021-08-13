@@ -10,21 +10,34 @@ git clone https://github.com/bakercp/ofxNetworkUtils.git
 git clone https://github.com/bakercp/ofxSSLManager.git
 ```
 
-# hosting on runway
-+ Hosting on Runway requires runway_model.py, runway.yml. 
-+ I then set up a virtualenv using [these instructions](https://gist.github.com/frfahim/73c0fad6350332cef7a653bcd762f08d)
-+ first download python 3.6 https://linuxize.com/post/how-to-install-python-3-7-on-ubuntu-18-04/
+# running local in develop mode on runway
+
+Build the docker from Dockerfile
 ```
-virtualenv -p /usr/bin/python3.6 venv
-source venv/bin/activate
-# fix some error, install dnnlib manually
-pip install https://github.com/podgorskiy/dnnlib/releases/download/0.0.1/dnnlib-0.0.1-py3-none-any.whl
-pip3 install -r requirements.txt
-deactivate
+docker build . --tag my/tf1
 ```
+
+Run a docker container, expose port 9000 and 127.0.0.1, mount current working directory to /workspace/ in the container, enable gpu, and load the tf1 image into a bash terminal
+```
+docker run --expose 9000 --network="host" -v $PWD:/workspace/ --gpus all -it my/tf1 /bin/bash
+```
+
+then run the python
+```
+python3 runway_model.py
+```
+
+then hit Connect in Runway
+
+then run the OF app
+
+### Notes
+
+The dnnlib I was using before was incompatible with SG2-ada, so keep an eye out for that. I borrowed a lot from https://github.com/usufyan29/stylegan2_runway
 
 
 ## useful links
+
 https://help.runwayml.com/hc/en-us/articles/4401808774419-Adding-Models
 [stylegan w runway implementation](https://github.com/agermanidis/stylegan)
 
