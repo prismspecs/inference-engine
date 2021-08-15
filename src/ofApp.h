@@ -62,7 +62,10 @@ public:
 	int num_isolated = 18;
 
 	float distance = 0.0; // how far from destination
+<<<<<<< HEAD
 
 	// debug
 	int counter = 0;
+=======
+>>>>>>> 224eb28c7235d902cf882b95864f3a0b06593007
 };
