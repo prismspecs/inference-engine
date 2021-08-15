@@ -25,6 +25,8 @@ public:
 
 	ofImage currentImg;
 	ofImage targetImg;
+	ofFbo currentFbo;
+	ofFbo targetFbo;
 
 	vector<float> generate_random_z();
 	void generate_image(vector<float> z, float truncation, int next_loc);
@@ -60,4 +62,7 @@ public:
 	int num_isolated = 18;
 
 	float distance = 0.0; // how far from destination
+
+	// debug
+	int counter = 0;
 };

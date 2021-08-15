@@ -22,6 +22,11 @@ Run a docker container, expose port 9000 and 127.0.0.1, mount current working di
 docker run --expose 9000 --network="host" -v $PWD:/workspace/ --gpus all -it my/tf1 /bin/bash
 ```
 
+install dependencies
+```
+pip install -r requirements.txt
+```
+
 then run the python
 ```
 python3 runway_model.py

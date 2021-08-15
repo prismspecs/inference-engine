@@ -32,6 +32,10 @@ void ofApp::setup()
 
     // set up game
     newPosition();
+    
+    // set up graphics contexts
+    currentFbo.allocate(img_dims, img_dims, GL_RGBA);
+
 
     //targetImg.allocate(1024,1024,OF_IMAGE_COLOR);
 }
@@ -85,13 +89,21 @@ void ofApp::draw()
     // draw image received from Runway
     if (targetImg.isAllocated())
     {
+
         targetImg.draw(img_dims, 0);
     }
 
     // draw image received from Runway
     if (currentImg.isAllocated())
     {
+        ofEnableAlphaBlending();  
+        currentFbo.begin();
+        ofSetColor(255,255,255,10);  
         currentImg.draw(0, 0);
+        currentFbo.end();
+        ofDisableAlphaBlending();
+
+        currentFbo.draw(0,0);
 
         // make_mesh(currentImg).draw();
         // draw_stars(currentImg);
@@ -231,7 +243,7 @@ vector<float> ofApp::generate_random_z()
 void ofApp::generate_image(vector<float> z, float truncation, int next_loc)
 {
 
-    cout << "generating image" << endl;
+    cout << "generating image " << counter++ << endl;
 
     // skip if content image isn't loaded yet
 
