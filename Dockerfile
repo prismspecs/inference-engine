@@ -10,3 +10,9 @@ RUN apt-get update && apt-get install -y ffmpeg
 # make all files created belong to me instead of docker root
 RUN usermod -u 1000 www-data
 RUN usermod -G staff www-data
+
+# networking
+EXPOSE 9000
+
+# autorun script
+CMD ["python3", "runway_model.py"]

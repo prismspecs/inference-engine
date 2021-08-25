@@ -5,3 +5,4 @@ ofxNetworkUtils
 ofxSSLManager
 ofxRunway
 ofxGui
+ofxMidi

@@ -7,7 +7,9 @@ void ofApp::setup()
     //uncomment the following line if you want a verbose log (which means a lot of info will be printed)
     // ofSetLogLevel(OF_LOG_VERBOSE);
 
-    ofSetWindowShape(img_dims * 2, img_dims);
+    // ofSetWindowShape(img_dims * 2, img_dims);
+
+    ofSetWindowShape(img_dims, img_dims);
 
     // setup Runway
     runway.setup(this, "http://localhost:8000");
@@ -32,12 +34,31 @@ void ofApp::setup()
 
     // set up game
     newPosition();
-    
-    // set up graphics contexts
-    currentFbo.allocate(img_dims, img_dims, GL_RGBA);
 
+    // set up graphics contexts
+    currentFbo.allocate(img_dims, img_dims, GL_RGB);
+    targetFbo.allocate(img_dims, img_dims, GL_RGB);
 
     //targetImg.allocate(1024,1024,OF_IMAGE_COLOR);
+
+    // MIDI
+    // print input ports to console
+    midiIn.listInPorts();
+
+    // open port by number (you may need to change this)
+    //midiIn.openPort(1);
+    //cout << midiIn.getName() << endl;
+    midiIn.openPort("Launch Control XL:Launch Control XL MIDI 1 28:0"); // by name
+
+    // don't ignore sysex, timing, & active sense messages,
+    // these are ignored by default
+    midiIn.ignoreTypes(false, false, false);
+
+    // add ofApp as a listener
+    midiIn.addListener(this);
+
+    // print received messages to the console
+    midiIn.setVerbose(true);
 }
 //--------------------------------------------------------------
 void ofApp::update()
@@ -66,11 +87,17 @@ void ofApp::update()
             {
                 dataToReceive.getImage("image", currentImg);
                 currentImg.update();
+
+                // // image warp
+                // ImageWarp iw = ImageWarp();
+                // warps.push_back(iw);
+                // ofImage copy = currentImg;
+                // iw.setup(copy);
             }
             // are we waiting for a 'target' image?
             else if (next_image_loc[0] == TARGET_IMAGE)
             {
-                cout << "placing target" << endl;
+                // cout << "placing target" << endl;
 
                 dataToReceive.getImage("image", targetImg);
                 targetImg.update();
@@ -81,32 +108,101 @@ void ofApp::update()
         }
     }
 
+    // perhaps only generate an image every X milliseconds
+    // should also prevent duplicates...
+    if (ofGetElapsedTimeMillis() > last_image_gen + image_gen_freq)
+    {
+        generate_image(current_position, truncation, CURRENT_IMAGE);
+        // for some reason target image isnt drawing unless i do this
+        generate_image(target_position, truncation, TARGET_IMAGE);
+        last_image_gen = ofGetElapsedTimeMillis();
+    }
+
+    // update effects
+    // cout << warps.size() << endl;
+    for (int i = warps.size() - 1; i >= 0; i--)
+    {
+        warps[i].update();
+
+        // cout << warps[i].alpha << endl;
+
+        if (warps[i].alpha <= 0)
+        {
+            warps.erase(warps.begin() + i);
+        }
+    }
+
+    // HUD
+
+    // MIDI
+    for (unsigned int i = 0; i < midiMessages.size(); ++i)
+    {
+        ofxMidiMessage &message = midiMessages[i];
+
+        int c = message.control - 1;
+
+        if (c < num_isolated)
+        {
+            vecs.at(c) = ofMap(message.value, 0, 127, -min_max_vecs, min_max_vecs);
+            update_position();
+        }
+    }
 }
 //--------------------------------------------------------------
 void ofApp::draw()
 {
-    // draw target location image
-    // draw image received from Runway
-    if (targetImg.isAllocated())
-    {
-
-        targetImg.draw(img_dims, 0);
-    }
 
     // draw image received from Runway
     if (currentImg.isAllocated())
     {
-        ofEnableAlphaBlending();  
+        ofEnableAlphaBlending();
         currentFbo.begin();
-        ofSetColor(255,255,255,10);  
+        ofSetColor(255, 255, 255, 15);
         currentImg.draw(0, 0);
         currentFbo.end();
         ofDisableAlphaBlending();
 
-        currentFbo.draw(0,0);
+        currentFbo.draw(0, 0);
 
         // make_mesh(currentImg).draw();
         // draw_stars(currentImg);
+    }
+
+    // show zooming images
+    for (int i = 0; i < warps.size(); i++)
+    {
+        // cout << "drawing warp" << endl;
+        warps[i].draw();
+    }
+
+    // draw target location image
+    if (targetImg.isAllocated())
+    {
+        //targetImg.draw(img_dims, 0);
+
+        // draw to fbo instead and integrate into HUD
+        targetFbo.begin();
+        targetImg.draw(0, 0);
+        targetFbo.end();
+
+        // draw the target image, allow toggle for larger view
+        if (targetimg_maximized)
+        {
+            targetimg_x = ofLerp(targetimg_x, tiX_max, .05);
+            targetimg_y = ofLerp(targetimg_y, tiY_max, .05);
+            targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
+
+            targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+        }
+        else
+        {
+
+            targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
+            targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
+            targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
+
+            targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+        }
     }
 
     // draw runway's status. It returns the bounding box of the drawn text. It is useful so you can draw other stuff and avoid overlays
@@ -157,6 +253,10 @@ void ofApp::newPosition()
         // cout << picked << ", ";
     }
 
+    // now that controllable vectors have been isolated for new round, update the
+    // current position so that it takes these into effect
+    update_position();
+
     // cout << endl;
 
     // generate a new target based on which input vectors should be frozen
@@ -176,6 +276,20 @@ void ofApp::keyReleased(int key)
     if (key == ' ')
     {
         generate_image(generate_random_z(), truncation, CURRENT_IMAGE);
+    }
+
+    if (key == 'w')
+    {
+        // image warp
+        ImageWarp iw = ImageWarp();
+        warps.push_back(iw);
+        ofImage copy = currentImg;
+        iw.setup(copy);
+    }
+
+    if (key == 't')
+    {
+        targetimg_maximized = !targetimg_maximized;
     }
 }
 //--------------------------------------------------------------
@@ -214,16 +328,30 @@ void ofApp::keyPressed(int key)
 //--------------------------------------------------------------
 void ofApp::control_changed(ofAbstractParameter &e)
 {
+
+    update_position();
+
+    // probably shouldnt generate a new image every time the controls change
+    // because they work faster than the framerate
+    // generate_image(current_position, truncation, CURRENT_IMAGE);
+
+    //cout << find_distance(target_position, current_position) << endl;
+}
+
+//--------------------------------------------------------------
+void ofApp::update_position()
+{
+    // ImageWarp iw = ImageWarp();
+    // warps.push_back(iw);
+    // ofImage copy = currentImg;
+    // iw.setup(copy);
+
     for (size_t i{0}; i < num_isolated; ++i)
     {
         // change the associated isolated vector
         current_position[isolate_vectors[i]] = vecs.at(i);
         //current_position[i] = vecs.at(i); // OOPS! this was wrong
     }
-
-    generate_image(current_position, truncation, CURRENT_IMAGE);
-
-    //cout << find_distance(target_position, current_position) << endl;
 }
 
 //--------------------------------------------------------------
@@ -243,7 +371,7 @@ vector<float> ofApp::generate_random_z()
 void ofApp::generate_image(vector<float> z, float truncation, int next_loc)
 {
 
-    cout << "generating image " << counter++ << endl;
+    // cout << "generating image " << counter++ << endl;
 
     // skip if content image isn't loaded yet
 
@@ -357,4 +485,26 @@ void ofApp::runwayInfoEvent(ofJson &info)
 void ofApp::runwayErrorEvent(string &message)
 {
     ofLogNotice("ofApp::runwayErrorEvent") << message;
+}
+//--------------------------------------------------------------
+void ofApp::exit()
+{
+
+    // clean up
+    midiIn.closePort();
+    midiIn.removeListener(this);
+}
+
+//--------------------------------------------------------------
+void ofApp::newMidiMessage(ofxMidiMessage &msg)
+{
+
+    // add the latest message to the message queue
+    midiMessages.push_back(msg);
+
+    // remove any old messages if we have too many
+    while (midiMessages.size() > maxMessages)
+    {
+        midiMessages.erase(midiMessages.begin());
+    }
 }
