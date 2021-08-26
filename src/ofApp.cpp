@@ -89,10 +89,8 @@ void ofApp::update()
                 currentImg.update();
 
                 // // image warp
-                // ImageWarp iw = ImageWarp();
+                // ImageWarp iw = ImageWarp(currentImg);
                 // warps.push_back(iw);
-                // ofImage copy = currentImg;
-                // iw.setup(copy);
             }
             // are we waiting for a 'target' image?
             else if (next_image_loc[0] == TARGET_IMAGE)
@@ -209,13 +207,23 @@ void ofApp::draw()
     // ofRectangle r = runway.drawStatus(620, 440, true);
     // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
 
-    // draw distance
+    // draw distance indicator
     ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
     ofSetColor(0);
     ofDrawRectangle(r);
     string diststr = ofToString(distance);
     ofSetColor(255);
     ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
+
+    ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
+    float max_dist = sqrt(4 * num_isolated);
+    float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
+
+    ofRectangle distance_meter(10, ofGetHeight() - 40, mapped_dist, 20);
+    ofSetColor(0);
+    ofDrawRectangle(distance_bg);
+    ofSetColor(255);
+    ofDrawRectangle(distance_meter);
 
     // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
 
@@ -281,10 +289,8 @@ void ofApp::keyReleased(int key)
     if (key == 'w')
     {
         // image warp
-        ImageWarp iw = ImageWarp();
+        ImageWarp iw = ImageWarp(currentImg);
         warps.push_back(iw);
-        ofImage copy = currentImg;
-        iw.setup(copy);
     }
 
     if (key == 't')
@@ -341,16 +347,11 @@ void ofApp::control_changed(ofAbstractParameter &e)
 //--------------------------------------------------------------
 void ofApp::update_position()
 {
-    // ImageWarp iw = ImageWarp();
-    // warps.push_back(iw);
-    // ofImage copy = currentImg;
-    // iw.setup(copy);
 
     for (size_t i{0}; i < num_isolated; ++i)
     {
         // change the associated isolated vector
         current_position[isolate_vectors[i]] = vecs.at(i);
-        //current_position[i] = vecs.at(i); // OOPS! this was wrong
     }
 }
 
