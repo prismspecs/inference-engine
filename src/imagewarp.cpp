@@ -1,13 +1,12 @@
 #include "imgwarp.h"
 
-ImageWarp::ImageWarp()
-{
-    img.allocate(1024, 1024, OF_IMAGE_COLOR);
-}
-
-void ImageWarp::setup(ofImage image)
+ImageWarp::ImageWarp(ofImage image)
 {
     img = image;
+}
+
+void ImageWarp::setup()
+{
 }
 
 void ImageWarp::update()

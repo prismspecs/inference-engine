@@ -6,7 +6,7 @@ class ImageWarp {
 
     public: 
 
-    void setup(ofImage image);  
+    void setup();  
     void update(); 
     void draw(); 
 
@@ -17,6 +17,6 @@ class ImageWarp {
     float scale = 1;
     float scaleSpeed = .01;
 
-    ImageWarp(); 
+    ImageWarp(ofImage image); 
 }; 
 #endif
