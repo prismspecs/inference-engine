@@ -59,6 +59,14 @@ void ofApp::setup()
 
     // print received messages to the console
     midiIn.setVerbose(true);
+
+    // set up effects
+    origin = ofVec3f(512, 512, -100);
+    ofDisableArbTex();
+    ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
+    warps.push_back(iw);
+    ofSetBackgroundColor(0,0,0);
+    // ofEnableDepthTest();
 }
 //--------------------------------------------------------------
 void ofApp::update()
@@ -87,10 +95,6 @@ void ofApp::update()
             {
                 dataToReceive.getImage("image", currentImg);
                 currentImg.update();
-
-                // // image warp
-                // ImageWarp iw = ImageWarp(currentImg);
-                // warps.push_back(iw);
             }
             // are we waiting for a 'target' image?
             else if (next_image_loc[0] == TARGET_IMAGE)
@@ -106,14 +110,27 @@ void ofApp::update()
         }
     }
 
-    // perhaps only generate an image every X milliseconds
-    // should also prevent duplicates...
-    if (ofGetElapsedTimeMillis() > last_image_gen + image_gen_freq)
+    // only do this if there has been some change w controls
+    if (controls_changed)
     {
-        generate_image(current_position, truncation, CURRENT_IMAGE);
-        // for some reason target image isnt drawing unless i do this
-        generate_image(target_position, truncation, TARGET_IMAGE);
-        last_image_gen = ofGetElapsedTimeMillis();
+        // perhaps only generate an image every X milliseconds
+        // should also prevent duplicates...
+        if (ofGetElapsedTimeMillis() > last_image_gen + image_gen_freq)
+        {
+
+            generate_image(current_position, truncation, CURRENT_IMAGE);
+            // for some reason target image isnt drawing unless i do this
+            generate_image(target_position, truncation, TARGET_IMAGE);
+            last_image_gen = ofGetElapsedTimeMillis();
+        }
+
+        if (ofGetElapsedTimeMillis() > last_warp + warp_freq)
+        {
+            last_warp = ofGetElapsedTimeMillis();
+            warp_effect(currentImg.getTexture(), origin);
+        }
+
+        controls_changed = false;
     }
 
     // update effects
@@ -151,56 +168,62 @@ void ofApp::draw()
 {
 
     // draw image received from Runway
-    if (currentImg.isAllocated())
-    {
-        ofEnableAlphaBlending();
-        currentFbo.begin();
-        ofSetColor(255, 255, 255, 15);
-        currentImg.draw(0, 0);
-        currentFbo.end();
-        ofDisableAlphaBlending();
+    // if (currentImg.isAllocated())
+    // {
+    //     ofEnableAlphaBlending();
+    //     currentFbo.begin();
+    //     ofSetColor(255, 255, 255, 15);
+    //     currentImg.draw(0, 0);
+    //     currentFbo.end();
+    //     ofDisableAlphaBlending();
 
-        currentFbo.draw(0, 0);
+    //     currentFbo.draw(0, 0);
 
-        // make_mesh(currentImg).draw();
-        // draw_stars(currentImg);
-    }
+    // }
 
+    ofEnableAlphaBlending();
     // show zooming images
-    for (int i = 0; i < warps.size(); i++)
+    for (int i = warps.size() - 1; i >= 0; i--)
     {
         // cout << "drawing warp" << endl;
         warps[i].draw();
     }
+    ofDisableAlphaBlending();
 
     // draw target location image
-    if (targetImg.isAllocated())
+    // if (targetImg.isAllocated())
+    // {
+    //     //targetImg.draw(img_dims, 0);
+
+    //     // draw to fbo instead and integrate into HUD
+    //     targetFbo.begin();
+    //     targetImg.draw(0, 0);
+    //     targetFbo.end();
+
+    //     // draw the target image, allow toggle for larger view
+    //     if (targetimg_maximized)
+    //     {
+    //         targetimg_x = ofLerp(targetimg_x, tiX_max, .05);
+    //         targetimg_y = ofLerp(targetimg_y, tiY_max, .05);
+    //         targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
+
+    //         targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+    //     }
+    //     else
+    //     {
+
+    //         targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
+    //         targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
+    //         targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
+
+    //         targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+    //     }
+    // }
+
+    // save frames for video
+    if (save_frames)
     {
-        //targetImg.draw(img_dims, 0);
-
-        // draw to fbo instead and integrate into HUD
-        targetFbo.begin();
-        targetImg.draw(0, 0);
-        targetFbo.end();
-
-        // draw the target image, allow toggle for larger view
-        if (targetimg_maximized)
-        {
-            targetimg_x = ofLerp(targetimg_x, tiX_max, .05);
-            targetimg_y = ofLerp(targetimg_y, tiY_max, .05);
-            targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
-
-            targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
-        }
-        else
-        {
-
-            targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
-            targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
-            targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
-
-            targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
-        }
+        ofSaveScreen("frames/" + ofToString(ofGetFrameNum()) + ".png");
     }
 
     // draw runway's status. It returns the bounding box of the drawn text. It is useful so you can draw other stuff and avoid overlays
@@ -270,8 +293,6 @@ void ofApp::newPosition()
     // generate a new target based on which input vectors should be frozen
     target_position = generate_new_target(starting_position, isolate_vectors);
 
-    bWaitingForTarget = true;
-
     generate_image(target_position, truncation, TARGET_IMAGE);
 
     // create image for destination
@@ -288,14 +309,17 @@ void ofApp::keyReleased(int key)
 
     if (key == 'w')
     {
-        // image warp
-        ImageWarp iw = ImageWarp(currentImg);
-        warps.push_back(iw);
+        warp_effect(currentImg.getTexture(), origin);
     }
 
     if (key == 't')
     {
         targetimg_maximized = !targetimg_maximized;
+    }
+
+    if (key == 's')
+    {
+        save_frames = !save_frames;
     }
 }
 //--------------------------------------------------------------
@@ -318,9 +342,13 @@ void ofApp::keyPressed(int key)
         // move all sliders to correct values slowly
         for (size_t i{0}; i < num_isolated; ++i)
         {
-            float lerped = ofLerp(vecs.at(i), target_position[isolate_vectors[i]], .02);
+            // float lerped = ofLerp(vecs.at(i), target_position[isolate_vectors[i]], lerp_speed);
+            float lerped = ofLerp(starting_position[isolate_vectors[i]], target_position[isolate_vectors[i]], lerp_speed);
+            lerp_speed += .000001;
             vecs.at(i).set(lerped);
         }
+
+        
 
         generate_image(current_position, truncation, CURRENT_IMAGE);
     }
@@ -336,6 +364,7 @@ void ofApp::control_changed(ofAbstractParameter &e)
 {
 
     update_position();
+    controls_changed = true;
 
     // probably shouldnt generate a new image every time the controls change
     // because they work faster than the framerate
@@ -353,6 +382,16 @@ void ofApp::update_position()
         // change the associated isolated vector
         current_position[isolate_vectors[i]] = vecs.at(i);
     }
+}
+//--------------------------------------------------------------
+void ofApp::warp_effect(ofTexture &texture, ofVec3f location)
+{
+    // image warp
+    ImageWarp iw = ImageWarp(texture, location);
+    warps.push_back(iw);
+
+    // find the oldest warp that isn't yet flying
+    warps[warps.size() - 2].fly = true;
 }
 
 //--------------------------------------------------------------
@@ -387,8 +426,6 @@ void ofApp::generate_image(vector<float> z, float truncation, int next_loc)
     data.setFloat("truncation", truncation);
 
     runway.send(data);
-
-    bWaitingForResponse = true;
 
     // add 'where this image will go' to the stack so it gets placed properly later
     next_image_loc.push_back(next_loc);
