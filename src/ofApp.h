@@ -23,9 +23,10 @@ public:
 	// effects
 	ofMesh make_mesh(ofImage image);
 	void draw_stars(ofImage image);
+	void warp_effect(ofTexture &texture, ofVec3f location);
 	// image warp, effect of images zooming towards camera
 	vector<ImageWarp> warps;
-
+	ofVec3f origin; // center of the screen
 
 	ofxRunway runway;
 
@@ -45,18 +46,24 @@ public:
 	void runwayInfoEvent(ofJson &info);
 	void runwayErrorEvent(string &message);
 
-	bool bWaitingForResponse = false;
-	bool bWaitingForTarget = false;
+	// bool bWaitingForResponse = false;
+	// bool bWaitingForTarget = false;
 
 	// gui
 	ofxPanel gui;
 	ofParameterGroup sliderGroup;
 	vector<ofParameter<float>> vecs;
 
+	// effects etc
+	bool controls_changed = true;
+	long last_warp;
+	int warp_freq = 1000; // how often we should request new image, was 200
+	float lerp_speed = .0001;
+
 	// vector<ofParameter<float>> floatSlider;
 	vector<int> next_image_loc; // where will next image go? (left or right)
 	long last_image_gen;
-	int image_gen_freq = 50;	// how often we should request new image
+	int image_gen_freq = 50; // how often we should request new image
 	#define CURRENT_IMAGE 0
 	#define TARGET_IMAGE 1
 
@@ -68,7 +75,7 @@ public:
 	vector<float> current_position;
 	vector<float> target_position;
 	vector<int> isolate_vectors;
-	int num_isolated = 32;
+	int num_isolated = 512;
 
 	// HUD variables
 	// fixed target image location and size for minimized target image
@@ -79,21 +86,21 @@ public:
 	float tiX_max, tiY_max = 0;
 	float tiD_max = img_dims;
 
-	bool targetimg_maximized = false;	// keep track of whether its minimzed or maximized
+	bool targetimg_maximized = false; // keep track of whether its minimzed or maximized
 	// "current" values so that I can lerp it in and out of minimized/maximized
 	float targetimg_x = tiX_min;
 	float targetimg_y = tiY_min;
 	float targetimg_dim = tiD_min;
 
-
 	float distance = 0.0; // how far from destination
 
 	// MIDI
-	void newMidiMessage(ofxMidiMessage& eventArgs);
+	void newMidiMessage(ofxMidiMessage &eventArgs);
 	ofxMidiIn midiIn;
 	std::vector<ofxMidiMessage> midiMessages;
 	std::size_t maxMessages = 10; // max number of messages to keep track of
 
-	// debug
+	// debug, etc
 	int counter = 0;
+	bool save_frames = false;
 };
