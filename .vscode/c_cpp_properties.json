@@ -106,7 +106,21 @@
                 "/usr/include/gstreamer-1.0",
                 "/usr/include/glib-2.0",
                 "${workspaceRoot}",
-                "${workspaceFolder}"
+                "${workspaceFolder}",
+                "/usr/lib/x86_64-linux-gnu/glib-2.0/include",
+                "/home/grayson/workbench/of/addons/ofxRunway/src",
+                "/home/grayson/workbench/of/addons/ofxHTTP/src",
+                "/home/grayson/workbench/of/addons/ofxSSLManager/src",
+                "/home/grayson/workbench/of/addons/ofxIO/src",
+                "/home/grayson/workbench/of/addons/ofxIO/libs/ofxIO/include",
+                "/home/grayson/workbench/of/addons/ofxMediaType/src",
+                "/home/grayson/workbench/of/addons/ofxMediaType/libs/ofxMediaType/include",
+                "/home/grayson/workbench/of/addons/ofxNetwork/src",
+                "/home/grayson/workbench/of/addons/ofxHTTP/libs/ofxHTTP/include",
+                "/home/grayson/workbench/of/addons/ofxNetworkUtils/libs/ofxNetworkUtils/include",
+                "/home/grayson/workbench/of/addons/ofxGui/src",
+                "/home/grayson/workbench/of/addons/ofxMidi/src",
+                "/home/grayson/workbench/of/addons/ofxMidi/libs/rtmidi"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,

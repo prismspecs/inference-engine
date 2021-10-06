@@ -4,11 +4,7 @@
 
 void ofApp::setup()
 {
-    //uncomment the following line if you want a verbose log (which means a lot of info will be printed)
-    // ofSetLogLevel(OF_LOG_VERBOSE);
-
     // ofSetWindowShape(img_dims * 2, img_dims);
-
     ofSetWindowShape(img_dims, img_dims);
 
     // setup Runway
@@ -22,7 +18,11 @@ void ofApp::setup()
         ofParameter<float> p;
         std::string name = "vec ";
         name += to_string(i);
-        p.set(name, 0, -min_max_vecs, min_max_vecs);
+
+        // make sure to randomize vecs because if they are set to 0 it gets funky
+        float rand = ofRandom(-1, 1);
+
+        p.set(name, rand, -min_max_vecs, min_max_vecs);
         // p.addListener(this, &ofApp::control_changed);
 
         vecs.push_back(p);
@@ -32,289 +32,400 @@ void ofApp::setup()
     ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
     gui.setup(sliderGroup);
 
-    // set up game
-    newPosition();
-
-    // set up graphics contexts
-    currentFbo.allocate(img_dims, img_dims, GL_RGB);
-    targetFbo.allocate(img_dims, img_dims, GL_RGB);
-
-    //targetImg.allocate(1024,1024,OF_IMAGE_COLOR);
-
-    // MIDI
-    // print input ports to console
-    midiIn.listInPorts();
-
-    // open port by number (you may need to change this)
-    //midiIn.openPort(1);
-    //cout << midiIn.getName() << endl;
-    midiIn.openPort("Launch Control XL:Launch Control XL MIDI 1 28:0"); // by name
-
-    // don't ignore sysex, timing, & active sense messages,
-    // these are ignored by default
-    midiIn.ignoreTypes(false, false, false);
-
-    // add ofApp as a listener
-    midiIn.addListener(this);
-
-    // print received messages to the console
-    midiIn.setVerbose(true);
+    ofTrueTypeFontSettings settings("../Ubuntu-B.ttf", 36);
+    font_menu.load(settings);
 
     // set up effects
     origin = ofVec3f(512, 512, -100);
     ofDisableArbTex();
-    ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
-    warps.push_back(iw);
-    ofSetBackgroundColor(0,0,0);
+    // ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
+    // warps.push_back(iw);
+    ofSetBackgroundColor(0, 0, 0);
     // ofEnableDepthTest();
+
+    // set up graphics contexts
+    currentFbo.allocate(img_dims, img_dims, GL_RGB);
+    targetFbo.allocate(img_dims, img_dims, GL_RGB);
+    surface_main.setup(origin, img_dims);
+
+    // set up game
+    newPosition();
+
+    // controller
+    controller.setup();
+
+    // // MIDI
+    // // print input ports to console
+    // midiIn.listInPorts();
+
+    // // open port by number (you may need to change this)
+    // //midiIn.openPort(1);
+    // //cout << midiIn.getName() << endl;
+    // midiIn.openPort("Launch Control XL:Launch Control XL MIDI 1 28:0"); // by name
+
+    // // don't ignore sysex, timing, & active sense messages,
+    // // these are ignored by default
+    // midiIn.ignoreTypes(false, false, false);
+
+    // // add ofApp as a listener
+    // midiIn.addListener(this);
+
+    // // print received messages to the console
+    // midiIn.setVerbose(true);
 }
 //--------------------------------------------------------------
 void ofApp::update()
 {
-    // update distance
-    distance = find_distance(target_position, current_position);
 
-    // debugging the image request stack
-    // for (int i = 0; i < next_image_loc.size(); i++)
-    // {
-    //     cout << i << ", " << next_image_loc[i] << endl;
-    // }
+    // update controller
+    controller.update();
 
-    if (next_image_loc.size() > 0)
+
+    switch (GAME_STATE)
+    {
+    case MENU:
     {
 
-        // check if there is data to receive
-        ofxRunwayData dataToReceive;
-        // bool is_data = runway.tryReceive(dataToReceive);
-        // cout << "is there data? " << is_data << endl;
+        break;
+    }
+    case PLAYING:
+    {
 
-        while (runway.tryReceive(dataToReceive))
+        // update distance
+        distance = find_distance(target_position, current_position);
+
+        // they win!
+        if (distance < .5)
         {
-            // are we waiting for a 'current' image?
-            if (next_image_loc[0] == CURRENT_IMAGE)
+            GAME_STATE = END;
+        }
+
+        if (next_image_loc.size() > 0)
+        {
+
+            // check if there is data to receive
+            ofxRunwayData dataToReceive;
+
+            while (runway.tryReceive(dataToReceive))
             {
-                dataToReceive.getImage("image", currentImg);
-                currentImg.update();
+                // are we waiting for a 'current' image?
+                if (next_image_loc[0] == CURRENT_IMAGE)
+                {
+                    dataToReceive.getImage("image", currentImg);
+                    currentImg.update();
+                    surface_main.update(currentImg.getTexture());
+                    // cout << "received new current image" << endl;
+                }
+                // are we waiting for a 'target' image?
+                else if (next_image_loc[0] == TARGET_IMAGE)
+                {
+                    // cout << "placing target" << endl;
+
+                    dataToReceive.getImage("image", targetImg);
+                    targetImg.update();
+                }
+
+                // erase this entry
+                next_image_loc.erase(next_image_loc.begin());
             }
-            // are we waiting for a 'target' image?
-            else if (next_image_loc[0] == TARGET_IMAGE)
+        }
+
+        // only do this if there has been some change with controls
+        if (controls_changed)
+        {
+            // perhaps only generate an image every X milliseconds
+            if (ofGetElapsedTimeMillis() > last_image_gen + image_gen_freq)
             {
-                // cout << "placing target" << endl;
 
-                dataToReceive.getImage("image", targetImg);
-                targetImg.update();
+                generate_image(current_position, truncation, CURRENT_IMAGE);
+                // for some reason target image isnt drawing unless i do this
+                // generate_image(target_position, truncation, TARGET_IMAGE);
+                last_image_gen = ofGetElapsedTimeMillis();
             }
 
-            // erase this entry
-            next_image_loc.erase(next_image_loc.begin());
+            if (ofGetElapsedTimeMillis() > last_warp + warp_freq)
+            {
+                last_warp = ofGetElapsedTimeMillis();
+                warp_effect(currentImg.getTexture(), origin);
+            }
+
+            controls_changed = false;
         }
+
+        // update effects
+        for (int i = warps.size() - 1; i >= 0; i--)
+        {
+            warps[i].update();
+
+            if (warps[i].alpha <= 0)
+            {
+                warps.erase(warps.begin() + i);
+            }
+        }
+
+        // HUD
+
+        // MIDI
+        for (unsigned int i = 0; i < midiMessages.size(); ++i)
+        {
+            ofxMidiMessage &message = midiMessages[i];
+
+            int c = message.control - 1;
+
+            if (c < num_isolated)
+            {
+                vecs.at(c) = ofMap(message.value, 0, 127, -min_max_vecs, min_max_vecs);
+                update_position();
+            }
+        }
+
+        break;
     }
-
-    // only do this if there has been some change w controls
-    if (controls_changed)
+    case END:
     {
-        // perhaps only generate an image every X milliseconds
-        // should also prevent duplicates...
-        if (ofGetElapsedTimeMillis() > last_image_gen + image_gen_freq)
-        {
-
-            generate_image(current_position, truncation, CURRENT_IMAGE);
-            // for some reason target image isnt drawing unless i do this
-            generate_image(target_position, truncation, TARGET_IMAGE);
-            last_image_gen = ofGetElapsedTimeMillis();
-        }
-
-        if (ofGetElapsedTimeMillis() > last_warp + warp_freq)
-        {
-            last_warp = ofGetElapsedTimeMillis();
-            warp_effect(currentImg.getTexture(), origin);
-        }
-
-        controls_changed = false;
+        break;
     }
-
-    // update effects
-    // cout << warps.size() << endl;
-    for (int i = warps.size() - 1; i >= 0; i--)
-    {
-        warps[i].update();
-
-        // cout << warps[i].alpha << endl;
-
-        if (warps[i].alpha <= 0)
-        {
-            warps.erase(warps.begin() + i);
-        }
-    }
-
-    // HUD
-
-    // MIDI
-    for (unsigned int i = 0; i < midiMessages.size(); ++i)
-    {
-        ofxMidiMessage &message = midiMessages[i];
-
-        int c = message.control - 1;
-
-        if (c < num_isolated)
-        {
-            vecs.at(c) = ofMap(message.value, 0, 127, -min_max_vecs, min_max_vecs);
-            update_position();
-        }
     }
 }
 //--------------------------------------------------------------
 void ofApp::draw()
 {
 
-    // draw image received from Runway
-    // if (currentImg.isAllocated())
-    // {
-    //     ofEnableAlphaBlending();
-    //     currentFbo.begin();
-    //     ofSetColor(255, 255, 255, 15);
-    //     currentImg.draw(0, 0);
-    //     currentFbo.end();
-    //     ofDisableAlphaBlending();
-
-    //     currentFbo.draw(0, 0);
-
-    // }
-
-    ofEnableAlphaBlending();
-    // show zooming images
-    for (int i = warps.size() - 1; i >= 0; i--)
+    switch (GAME_STATE)
     {
-        // cout << "drawing warp" << endl;
-        warps[i].draw();
+    case MENU:
+    {
+        // draw the menu
+        ofClear(0);
+        if (menu_selection == 0)
+        {
+            ofSetColor(255, 255, 0);
+        }
+        font_menu.drawString("start game", 100, 100);
+
+        break;
     }
-    ofDisableAlphaBlending();
+    case PLAYING:
+    {
 
-    // draw target location image
-    // if (targetImg.isAllocated())
-    // {
-    //     //targetImg.draw(img_dims, 0);
+        // draw image received from Runway
+        // if (currentImg.isAllocated())
+        // {
+        //     ofEnableAlphaBlending();
+        //     currentFbo.begin();
+        //     ofSetColor(255, 255, 255, 15);
+        //     currentImg.draw(0, 0);
+        //     currentFbo.end();
+        //     ofDisableAlphaBlending();
+        //     currentFbo.draw(0, 0);
+        // }
 
-    //     // draw to fbo instead and integrate into HUD
-    //     targetFbo.begin();
-    //     targetImg.draw(0, 0);
-    //     targetFbo.end();
+        ofEnableAlphaBlending();
+        surface_main.draw();
+        ofDisableAlphaBlending();
 
-    //     // draw the target image, allow toggle for larger view
-    //     if (targetimg_maximized)
-    //     {
-    //         targetimg_x = ofLerp(targetimg_x, tiX_max, .05);
-    //         targetimg_y = ofLerp(targetimg_y, tiY_max, .05);
-    //         targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
+        // ofEnableAlphaBlending();
+        // // show zooming images
+        // for (int i = warps.size() - 1; i >= 0; i--)
+        // {
+        //     // cout << "drawing warp" << endl;
+        //     warps[i].draw();
+        // }
+        // ofDisableAlphaBlending();
 
-    //         targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
-    //     }
-    //     else
-    //     {
+        // draw target location image
+        if (targetImg.isAllocated())
+        {
+            //targetImg.draw(img_dims, 0);
 
-    //         targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
-    //         targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
-    //         targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
+            // draw to fbo instead and integrate into HUD
+            targetFbo.begin();
+            targetImg.draw(0, 0);
+            targetFbo.end();
 
-    //         targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
-    //     }
-    // }
+            // draw the target image, allow toggle for larger view
+            if (targetimg_maximized)
+            {
+                targetimg_x = ofLerp(targetimg_x, tiX_max, .05);
+                targetimg_y = ofLerp(targetimg_y, tiY_max, .05);
+                targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
+
+                targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+            }
+            else
+            {
+
+                targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
+                targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
+                targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
+
+                targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+            }
+        }
+
+        // draw distance indicator
+        ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
+        ofSetColor(0);
+        ofDrawRectangle(r);
+        string diststr = ofToString(distance);
+        ofSetColor(255);
+        ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
+
+        ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
+        float max_dist = sqrt(4 * num_isolated);
+        float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
+
+        ofRectangle distance_meter(10, ofGetHeight() - 40, mapped_dist, 20);
+        ofSetColor(0);
+        ofDrawRectangle(distance_bg);
+        ofSetColor(255);
+
+        ofDrawRectangle(distance_meter);
+
+        gui.draw();
+
+        break;
+    }
+    case END:
+    {
+
+        // draw the menu
+        ofClear(0);
+        drawCenteredText("YOU WIN!", ofColor::yellow);
+        break;
+    }
+    }
+
+
+
+    // debug controller
+    controller.draw();
+
+
 
     // save frames for video
     if (save_frames)
     {
         ofSaveScreen("frames/" + ofToString(ofGetFrameNum()) + ".png");
     }
-
-    // draw runway's status. It returns the bounding box of the drawn text. It is useful so you can draw other stuff and avoid overlays
-    // ofRectangle r = runway.drawStatus(620, 440, true);
-    // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
-
-    // draw distance indicator
-    ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
-    ofSetColor(0);
-    ofDrawRectangle(r);
-    string diststr = ofToString(distance);
-    ofSetColor(255);
-    ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
-
-    ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
-    float max_dist = sqrt(4 * num_isolated);
-    float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
-
-    ofRectangle distance_meter(10, ofGetHeight() - 40, mapped_dist, 20);
-    ofSetColor(0);
-    ofDrawRectangle(distance_bg);
-    ofSetColor(255);
-    ofDrawRectangle(distance_meter);
-
-    // ofDrawBitmapString("Press ' ' to send to Runway", r.getBottomLeft() + glm::vec3(0, 20, 0));
-
-    gui.draw();
-
-    // save frame
-    // string fn = ofToString(ofGetFrameNum(),4,'0')+".png";
-    // cout << fn << endl;
-
-    // ofSaveScreen(fn);
 }
 //--------------------------------------------------------------
 void ofApp::newPosition()
 {
+
+    // generate a new random starting position
     starting_position = generate_random_z();
+    // set current position to this new starting position
     current_position = starting_position;
 
-    // decide which vectors will be in play this round
-    isolate_vectors.clear();
-    vector<int> hat;
-    for (int i = 0; i < 512; i++)
+    // decide which vectors will be in play this round at random
+    if (RANDOMIZE_VECS)
     {
-        hat.push_back(i);
+        isolate_vectors.clear();
+        vector<int> hat;
+        for (int i = 0; i < 512; i++)
+        {
+            hat.push_back(i);
+        }
+
+        for (int i = 0; i < num_isolated; i++)
+        {
+            // select from hat
+            int picked = int(ofRandom(hat.size()));
+            isolate_vectors.push_back(hat[picked]);
+            hat.erase(hat.begin() + picked);
+        }
     }
-
-    // cout << "isolated vectors are ";
-
-    for (int i = 0; i < num_isolated; i++)
+    else
     {
-        // select from hat
-        int picked = int(ofRandom(hat.size()));
-        isolate_vectors.push_back(hat[picked]);
-        hat.erase(hat.begin() + picked);
-
-        // cout << picked << ", ";
+        // debug, just set vecs directly, no mixing
+        for (int i = 0; i < num_isolated; i++)
+        {
+            isolate_vectors.push_back(i);
+        }
     }
 
     // now that controllable vectors have been isolated for new round, update the
     // current position so that it takes these into effect
     update_position();
 
-    // cout << endl;
+    // starting_position should take into account the current controller values
+    // starting_position = current_position;
+
+    controls_changed = true;
+    generate_image(current_position, truncation, CURRENT_IMAGE);
 
     // generate a new target based on which input vectors should be frozen
     target_position = generate_new_target(starting_position, isolate_vectors);
 
     generate_image(target_position, truncation, TARGET_IMAGE);
 
-    // create image for destination
-    // runway.get("image", targetImg);
+    // reset other game vars
+    lerp_amount = 0;
+
+    // delete all warp meshes
+    warps.clear();
+    warp_effect(currentImg.getTexture(), origin);
+}
+//--------------------------------------------------------------
+void ofApp::update_position()
+{
+
+    for (int i = 0; i < num_isolated; i++)
+    {
+        // change the associated isolated vector
+        current_position[isolate_vectors[i]] = vecs.at(i);
+    }
 }
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key)
 {
-
-    if (key == ' ')
+    // menu
+    switch (GAME_STATE)
     {
-        generate_image(generate_random_z(), truncation, CURRENT_IMAGE);
+    case MENU:
+        if (key == OF_KEY_UP)
+        {
+            menu_selection--;
+            if (menu_selection < 0)
+                menu_selection = menu_count;
+        }
+
+        if (key == OF_KEY_DOWN)
+        {
+            menu_selection++;
+            if (menu_selection > menu_count)
+                menu_selection = 0;
+        }
+
+        if (key == ' ')
+        {
+            GAME_STATE = PLAYING;
+        }
+        break;
+
+    case PLAYING:
+    {
+
+        if (key == 'n')
+        {
+            // reset game
+            newPosition();
+        }
+
+        // playing
+        if (key == 'w')
+        {
+            warp_effect(currentImg.getTexture(), origin);
+        }
+
+        if (key == 't')
+        {
+            targetimg_maximized = !targetimg_maximized;
+        }
+
+        break;
     }
-
-    if (key == 'w')
-    {
-        warp_effect(currentImg.getTexture(), origin);
-    }
-
-    if (key == 't')
-    {
-        targetimg_maximized = !targetimg_maximized;
     }
 
     if (key == 's')
@@ -339,25 +450,23 @@ void ofApp::keyPressed(int key)
 
     if (key == 'c')
     {
-        // move all sliders to correct values slowly
-        for (size_t i{0}; i < num_isolated; ++i)
-        {
-            // float lerped = ofLerp(vecs.at(i), target_position[isolate_vectors[i]], lerp_speed);
-            float lerped = ofLerp(starting_position[isolate_vectors[i]], target_position[isolate_vectors[i]], lerp_speed);
-            lerp_speed += .000001;
-            vecs.at(i).set(lerped);
-        }
-
-        
-
-        generate_image(current_position, truncation, CURRENT_IMAGE);
+        lerp_ship();
     }
-
-    if (key == 'n')
+}
+//--------------------------------------------------------------
+void ofApp::lerp_ship()
+{
+    // move all sliders to correct values slowly
+    for (size_t i{0}; i < num_isolated; ++i)
     {
-        // reset game
-        newPosition();
+        float lerped = ofLerp(starting_position[isolate_vectors[i]], target_position[isolate_vectors[i]], lerp_amount);
+        vecs.at(i).set(lerped);
     }
+
+    lerp_amount += lerp_speed;
+    lerp_amount = ofClamp(lerp_amount, 0, 1);
+
+    generate_image(current_position, truncation, CURRENT_IMAGE);
 }
 //--------------------------------------------------------------
 void ofApp::control_changed(ofAbstractParameter &e)
@@ -369,19 +478,6 @@ void ofApp::control_changed(ofAbstractParameter &e)
     // probably shouldnt generate a new image every time the controls change
     // because they work faster than the framerate
     // generate_image(current_position, truncation, CURRENT_IMAGE);
-
-    //cout << find_distance(target_position, current_position) << endl;
-}
-
-//--------------------------------------------------------------
-void ofApp::update_position()
-{
-
-    for (size_t i{0}; i < num_isolated; ++i)
-    {
-        // change the associated isolated vector
-        current_position[isolate_vectors[i]] = vecs.at(i);
-    }
 }
 //--------------------------------------------------------------
 void ofApp::warp_effect(ofTexture &texture, ofVec3f location)
@@ -410,8 +506,6 @@ vector<float> ofApp::generate_random_z()
 //--------------------------------------------------------------
 void ofApp::generate_image(vector<float> z, float truncation, int next_loc)
 {
-
-    // cout << "generating image " << counter++ << endl;
 
     // skip if content image isn't loaded yet
 
@@ -545,4 +639,11 @@ void ofApp::newMidiMessage(ofxMidiMessage &msg)
     {
         midiMessages.erase(midiMessages.begin());
     }
+}
+
+//--------------------------------------------------------------
+void ofApp::drawCenteredText(string str, ofColor color)
+{
+    ofSetColor(color);
+    font_menu.drawString(str, ofGetWidth() / 2 - font_menu.stringWidth(str) / 2, ofGetHeight() / 2 - font_menu.stringHeight(str) / 2);
 }
