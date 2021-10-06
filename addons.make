@@ -6,3 +6,4 @@ ofxSSLManager
 ofxRunway
 ofxGui
 ofxMidi
+ofxGLFWJoystick

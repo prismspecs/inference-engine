@@ -5,6 +5,9 @@
 #include "ofxGui.h"
 #include "ofxMidi.h"
 #include "imgwarp.h"
+#include "surface.h"
+#include "controller.h"
+#include "ofxGLFWJoystick.h"
 
 // make sure you make your ofApp or class to inherit from ofxRunwayListener
 class ofApp : public ofBaseApp, public ofxRunwayListener, public ofxMidiListener
@@ -19,6 +22,11 @@ public:
 
 	void keyReleased(int key);
 	void keyPressed(int key);
+
+	void drawCenteredText(string str, ofColor color);
+
+	// surfaces (main image contexts for game)
+	Surface surface_main;
 
 	// effects
 	ofMesh make_mesh(ofImage image);
@@ -41,24 +49,30 @@ public:
 	float find_distance(vector<float> a, vector<float> b);
 	void control_changed(ofAbstractParameter &e);
 	void update_position();
+	void lerp_ship();
+
 
 	// callback functions that process what Runway sends back
 	void runwayInfoEvent(ofJson &info);
 	void runwayErrorEvent(string &message);
 
-	// bool bWaitingForResponse = false;
-	// bool bWaitingForTarget = false;
 
 	// gui
 	ofxPanel gui;
 	ofParameterGroup sliderGroup;
 	vector<ofParameter<float>> vecs;
 
+	// game menu
+	ofTrueTypeFont font_menu;
+	int menu_selection = 0;
+	int menu_count = 0;	// how many menu items
+
 	// effects etc
 	bool controls_changed = true;
 	long last_warp;
-	int warp_freq = 1000; // how often we should request new image, was 200
-	float lerp_speed = .0001;
+	int warp_freq = 200; // how often we should request new image, was 200
+	float lerp_amount = 0;
+	float lerp_speed = .005;
 
 	// vector<ofParameter<float>> floatSlider;
 	vector<int> next_image_loc; // where will next image go? (left or right)
@@ -76,6 +90,11 @@ public:
 	vector<float> target_position;
 	vector<int> isolate_vectors;
 	int num_isolated = 512;
+	bool RANDOMIZE_VECS = true;
+	#define MENU 0
+	#define PLAYING 1
+	#define END 2
+	int GAME_STATE = 1;
 
 	// HUD variables
 	// fixed target image location and size for minimized target image
@@ -93,6 +112,9 @@ public:
 	float targetimg_dim = tiD_min;
 
 	float distance = 0.0; // how far from destination
+
+	// controller
+	Controller controller;
 
 	// MIDI
 	void newMidiMessage(ofxMidiMessage &eventArgs);
