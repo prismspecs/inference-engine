@@ -12,25 +12,28 @@ void ofApp::setup()
     runway.start();
 
     // setup gui
-    sliderGroup.setName("sliders");
-    for (size_t i{0}; i < num_isolated; ++i)
+    if (USE_GUI)
     {
-        ofParameter<float> p;
-        std::string name = "vec ";
-        name += to_string(i);
+        sliderGroup.setName("sliders");
+        for (size_t i{0}; i < num_isolated; ++i)
+        {
+            ofParameter<float> p;
+            std::string name = "vec ";
+            name += to_string(i);
 
-        // make sure to randomize vecs because if they are set to 0 it gets funky
-        float rand = ofRandom(-1, 1);
+            // make sure to randomize vecs because if they are set to 0 it gets funky
+            float rand = ofRandom(-1, 1);
 
-        p.set(name, rand, -min_max_vecs, min_max_vecs);
-        // p.addListener(this, &ofApp::control_changed);
+            p.set(name, rand, -min_max_vecs, min_max_vecs);
+            // p.addListener(this, &ofApp::control_changed);
 
-        vecs.push_back(p);
-        sliderGroup.add(vecs.at(i));
+            vecs.push_back(p);
+            sliderGroup.add(vecs.at(i));
+        }
+        // add listener for the controls so we only update when necessary
+        ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
+        gui.setup(sliderGroup);
     }
-    // add listener for the controls so we only update when necessary
-    ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
-    gui.setup(sliderGroup);
 
     ofTrueTypeFontSettings settings("../Ubuntu-B.ttf", 36);
     font_menu.load(settings);
@@ -49,10 +52,20 @@ void ofApp::setup()
     surface_main.setup(origin, img_dims);
 
     // set up game
+    // map out the controls
+    for (int i = 0; i < 512; i++)
+    {
+        shuffled_vecs.push_back(i);
+    }
     newPosition();
 
     // controller
-    controller.setup();
+    controller.setup(num_vec_groups);
+    ofAddListener(controller.headingChange, this, &ofApp::change_heading);
+    ofAddListener(controller.moveShip, this, &ofApp::move_ship);
+    ofAddListener(controller.sendControls, this, &ofApp::receive_controls);
+
+    
 
     // // MIDI
     // // print input ports to console
@@ -79,7 +92,6 @@ void ofApp::update()
 
     // update controller
     controller.update();
-
 
     switch (GAME_STATE)
     {
@@ -282,7 +294,10 @@ void ofApp::draw()
 
         ofDrawRectangle(distance_meter);
 
-        gui.draw();
+        if (USE_GUI)
+        {
+            gui.draw();
+        }
 
         break;
     }
@@ -296,12 +311,8 @@ void ofApp::draw()
     }
     }
 
-
-
     // debug controller
     controller.draw();
-
-
 
     // save frames for video
     if (save_frames)
@@ -312,38 +323,86 @@ void ofApp::draw()
 //--------------------------------------------------------------
 void ofApp::newPosition()
 {
+    // shuffle controller mappings
+    ofRandomize(shuffled_vecs);
 
-    // generate a new random starting position
-    starting_position = generate_random_z();
-    // set current position to this new starting position
+    // generate a new random starting position taking into account
+    // that vectors are now grouped randomly
+    
+    starting_position = generate_random_grouped_z();
+    target_position = generate_random_grouped_z();
     current_position = starting_position;
 
-    // decide which vectors will be in play this round at random
-    if (RANDOMIZE_VECS)
-    {
-        isolate_vectors.clear();
-        vector<int> hat;
-        for (int i = 0; i < 512; i++)
-        {
-            hat.push_back(i);
-        }
+    ofFile floats("dump.txt", ofFile::WriteOnly);
 
-        for (int i = 0; i < num_isolated; i++)
-        {
-            // select from hat
-            int picked = int(ofRandom(hat.size()));
-            isolate_vectors.push_back(hat[picked]);
-            hat.erase(hat.begin() + picked);
-        }
-    }
-    else
+    for (int i = 0; i < 512; i++)
     {
-        // debug, just set vecs directly, no mixing
-        for (int i = 0; i < num_isolated; i++)
-        {
-            isolate_vectors.push_back(i);
-        }
+        floats << ofToString(current_position[i]) << "\t\t\t" << ofToString(target_position[i]) << endl;
     }
+
+    // starting_position.clear();
+    // for (int i = 0; i < 512; i++)
+    // {
+    //     starting_position.push_back(ofRandom(-min_max_vecs, min_max_vecs));
+    // }
+
+    // for (int i = 0; i < num_vec_groups; i++)
+    // {
+    //     for (int v = 0; v < vecs_per_group; v++)
+    //     {
+    //         // set position but based on the shuffled associated vectors
+    //         // cout << shuffled_vecs[i * v] << endl;
+    //         starting_position[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
+    //     }
+    // }
+
+    // target_position.clear();
+    // for (int i = 0; i < 512; i++)
+    // {
+    //     target_position.push_back(ofRandom(-min_max_vecs, min_max_vecs));
+    // }
+
+    // for (int i = 0; i < num_vec_groups; i++)
+    // {
+    //     for (int v = 0; v < vecs_per_group; v++)
+    //     {
+    //         // set position but based on the shuffled associated vectors
+    //         // cout << shuffled_vecs[i * v] << endl;
+    //         target_position[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
+    //     }
+    // }
+
+    // // generate a new random starting position
+    // starting_position = generate_random_z();
+    // // set current position to this new starting position
+    // current_position = starting_position;
+
+    // // decide which vectors will be in play this round at random
+    // if (RANDOMIZE_VECS)
+    // {
+    //     isolate_vectors.clear();
+    //     vector<int> hat;
+    //     for (int i = 0; i < 512; i++)
+    //     {
+    //         hat.push_back(i);
+    //     }
+
+    //     for (int i = 0; i < num_isolated; i++)
+    //     {
+    //         // select from hat
+    //         int picked = int(ofRandom(hat.size()));
+    //         isolate_vectors.push_back(hat[picked]);
+    //         hat.erase(hat.begin() + picked);
+    //     }
+    // }
+    // else
+    // {
+    //     // debug, just set vecs directly, no mixing
+    //     for (int i = 0; i < num_isolated; i++)
+    //     {
+    //         isolate_vectors.push_back(i);
+    //     }
+    // }
 
     // now that controllable vectors have been isolated for new round, update the
     // current position so that it takes these into effect
@@ -356,7 +415,7 @@ void ofApp::newPosition()
     generate_image(current_position, truncation, CURRENT_IMAGE);
 
     // generate a new target based on which input vectors should be frozen
-    target_position = generate_new_target(starting_position, isolate_vectors);
+    // target_position = generate_new_target(starting_position, isolate_vectors);
 
     generate_image(target_position, truncation, TARGET_IMAGE);
 
@@ -368,15 +427,81 @@ void ofApp::newPosition()
     warp_effect(currentImg.getTexture(), origin);
 }
 //--------------------------------------------------------------
+void ofApp::change_heading(int &av)
+{
+    active_vec = av;
+    controls_changed = true;
+
+    // cout << "received heading change" << endl;
+}
+
+//--------------------------------------------------------------
+void ofApp::move_ship(float &direction)
+{
+    // cout << "received move ship" << endl;
+    current_position[isolate_vectors[active_vec]] += .01 * direction;
+    controls_changed = true;
+}
+//--------------------------------------------------------------
+void ofApp::receive_controls(vector<float> &controls)
+{
+    // cout << "received controls event" << endl;
+    // for (int i = 0; i < controls.size(); i++)
+    // {
+    //     cout << i << ": " << controls[i] << " | ";
+    // }
+    // cout << endl;
+
+    // controls are grouped so that the limited number of controls
+    // can effect the larger vector of current_position
+    // for(int i = 0; i < 512; i++)
+    // {
+    //     current_position[shuffled_vecs[i]] = 
+    // }
+    int index = 0;
+    for (int i = 0; i < controls.size(); i++)
+    {
+        // controls is a series of 16 floats
+        for (int v = 0; v < vecs_per_group; v++)
+        {
+            // shuffled_vecs[]
+            // cout << index++ << endl;
+            // set current position but based on the shuffled associated vectors
+            current_position[shuffled_vecs[index]] = controls[i];
+
+            index++;
+        }
+    }
+
+    // for(int i = 0; i < 512; i+=vecs_per_group) 
+    // {
+    //     for (int v = 0; v < vecs_per_group; v++)
+    //     {
+    //         current_position[shuffled_vecs[i+v]] = controls[i];
+    //     }
+    // }
+
+    controls_changed = true;
+
+    ofFile floats("current_position.txt", ofFile::WriteOnly);
+
+    for (int i = 0; i < 512; i++)
+    {
+        floats << ofToString(current_position[i]) << endl;
+    }
+}
+//--------------------------------------------------------------
 void ofApp::update_position()
 {
 
     for (int i = 0; i < num_isolated; i++)
     {
+        // if using GUI sliders...
         // change the associated isolated vector
-        current_position[isolate_vectors[i]] = vecs.at(i);
+        // current_position[isolate_vectors[i]] = vecs.at(i);
     }
 }
+
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key)
 {
@@ -489,7 +614,6 @@ void ofApp::warp_effect(ofTexture &texture, ofVec3f location)
     // find the oldest warp that isn't yet flying
     warps[warps.size() - 2].fly = true;
 }
-
 //--------------------------------------------------------------
 vector<float> ofApp::generate_random_z()
 {
@@ -502,7 +626,39 @@ vector<float> ofApp::generate_random_z()
 
     return z;
 }
+//--------------------------------------------------------------
+vector<float> ofApp::generate_random_grouped_z()
+{
+    vector<float> z; // create an empty vector of floats
+    for (int i = 0; i < 512; i++)
+    {
+        z.push_back(0.0);
+    }
 
+    // for (int i = 0; i < num_vec_groups; i++)
+    // {
+    //     for (int v = 0; v < vecs_per_group; v++)
+    //     {
+    //         // set position but based on the shuffled associated vectors
+    //         // cout << shuffled_vecs[i * v] << endl;
+    //         z[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
+    //     }
+    // }
+
+    int index = 0;
+    for (int i = 0; i < num_vec_groups; i++)
+    {
+        float rand = ofRandom(-min_max_vecs, min_max_vecs);
+        // controls is a series of 16 floats
+        for (int v = 0; v < vecs_per_group; v++)
+        {
+            z[shuffled_vecs[index]] = rand;
+            index++;
+        }
+    }
+
+    return z;
+}
 //--------------------------------------------------------------
 void ofApp::generate_image(vector<float> z, float truncation, int next_loc)
 {
