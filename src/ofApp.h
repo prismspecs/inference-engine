@@ -44,20 +44,23 @@ public:
 	ofFbo targetFbo;
 
 	vector<float> generate_random_z();
+	vector<float> generate_random_grouped_z();
 	void generate_image(vector<float> z, float truncation, int next_loc);
 	vector<float> generate_new_target(vector<float> startPos, vector<int> iso_vecs);
 	float find_distance(vector<float> a, vector<float> b);
 	void control_changed(ofAbstractParameter &e);
 	void update_position();
+	void change_heading(int &av);
+	void move_ship(float &direction);
+	void receive_controls(vector<float> &controls);
 	void lerp_ship();
-
 
 	// callback functions that process what Runway sends back
 	void runwayInfoEvent(ofJson &info);
 	void runwayErrorEvent(string &message);
 
-
 	// gui
+	bool USE_GUI = false;
 	ofxPanel gui;
 	ofParameterGroup sliderGroup;
 	vector<ofParameter<float>> vecs;
@@ -65,7 +68,7 @@ public:
 	// game menu
 	ofTrueTypeFont font_menu;
 	int menu_selection = 0;
-	int menu_count = 0;	// how many menu items
+	int menu_count = 0; // how many menu items
 
 	// effects etc
 	bool controls_changed = true;
@@ -78,8 +81,8 @@ public:
 	vector<int> next_image_loc; // where will next image go? (left or right)
 	long last_image_gen;
 	int image_gen_freq = 50; // how often we should request new image
-	#define CURRENT_IMAGE 0
-	#define TARGET_IMAGE 1
+#define CURRENT_IMAGE 0
+#define TARGET_IMAGE 1
 
 	// game variables
 	int img_dims = 1024;
@@ -91,10 +94,18 @@ public:
 	vector<int> isolate_vectors;
 	int num_isolated = 512;
 	bool RANDOMIZE_VECS = true;
-	#define MENU 0
-	#define PLAYING 1
-	#define END 2
+#define MENU 0
+#define PLAYING 1
+#define END 2
 	int GAME_STATE = 1;
+
+	// ship vars
+	int active_vec = 0;
+	// controller
+	Controller controller;
+	int num_vec_groups = 16; // 32 per group
+	int vecs_per_group = 512 / num_vec_groups;
+	vector<int> shuffled_vecs;
 
 	// HUD variables
 	// fixed target image location and size for minimized target image
@@ -112,9 +123,6 @@ public:
 	float targetimg_dim = tiD_min;
 
 	float distance = 0.0; // how far from destination
-
-	// controller
-	Controller controller;
 
 	// MIDI
 	void newMidiMessage(ofxMidiMessage &eventArgs);
