@@ -61,13 +61,15 @@ void ofApp::setup()
     {
         shuffled_vecs.push_back(i);
     }
-    newPosition();
 
     // controller
     controller.setup(num_vec_groups);
     ofAddListener(controller.headingChange, this, &ofApp::change_heading);
     ofAddListener(controller.moveShip, this, &ofApp::move_ship);
-    ofAddListener(controller.sendControls, this, &ofApp::receive_controls);
+    ofAddListener(controller.sendControlVectors, this, &ofApp::receive_control_vectors);
+    ofAddListener(controller.buttonPress, this, &ofApp::receive_button);
+
+    newPosition();
 
     // // MIDI
     // // print input ports to console
@@ -211,6 +213,7 @@ void ofApp::draw()
     {
         // draw the menu
         ofClear(0);
+
         if (menu_selection == 0)
         {
             ofSetColor(255, 255, 50);
@@ -344,15 +347,11 @@ void ofApp::newPosition()
     // that vectors are now grouped randomly
 
     starting_position = generate_random_grouped_z();
+    controller.reset(starting_position, shuffled_vecs); // make sure controller starts at correct pos
     target_position = generate_random_grouped_z();
     current_position = starting_position;
 
-    ofFile floats("dump.txt", ofFile::WriteOnly);
 
-    for (int i = 0; i < 512; i++)
-    {
-        floats << ofToString(current_position[i]) << "\t\t\t" << ofToString(target_position[i]) << endl;
-    }
 
     // starting_position.clear();
     // for (int i = 0; i < 512; i++)
@@ -457,16 +456,48 @@ void ofApp::move_ship(float &direction)
     controls_changed = true;
 }
 //--------------------------------------------------------------
-void ofApp::receive_controls(vector<float> &controls)
+void ofApp::receive_button(string &button)
+{
+    if (button == "up")
+    {
+        if (GAME_STATE == MENU)
+        {
+            menu_selection--;
+            if (menu_selection < 0)
+                menu_selection = menu_count;
+        }
+    }
+
+    if (button == "down")
+    {
+        if (GAME_STATE == MENU)
+        {
+            menu_selection++;
+            if (menu_selection > menu_count)
+                menu_selection = 0;
+        }
+    }
+
+    if (button == "fire")
+    {
+        if (GAME_STATE == MENU)
+        {
+            if (menu_selection == 0)
+                GAME_STATE = PLAYING;
+        }
+    }
+}
+//--------------------------------------------------------------
+void ofApp::receive_control_vectors(vector<float> &controls)
 {
 
     switch (GAME_STATE)
     {
-    case 0:
+    case MENU:
 
         break;
 
-    case 1:
+    case PLAYING:
         int index = 0;
         for (int i = 0; i < controls.size(); i++)
         {
@@ -492,12 +523,12 @@ void ofApp::receive_controls(vector<float> &controls)
     //     }
     // }
 
-        // ofFile floats("current_position.txt", ofFile::WriteOnly);
+    // ofFile floats("current_position.txt", ofFile::WriteOnly);
 
-        // for (int i = 0; i < 512; i++)
-        // {
-        //     floats << ofToString(current_position[i]) << endl;
-        // }
+    // for (int i = 0; i < 512; i++)
+    // {
+    //     floats << ofToString(current_position[i]) << endl;
+    // }
 }
 //--------------------------------------------------------------
 void ofApp::update_position()
@@ -518,26 +549,7 @@ void ofApp::keyReleased(int key)
     switch (GAME_STATE)
     {
     case MENU:
-        if (key == OF_KEY_UP)
-        {
-            menu_selection--;
-            if (menu_selection < 0)
-                menu_selection = menu_count;
-        }
-
-        if (key == OF_KEY_DOWN)
-        {
-            menu_selection++;
-            if (menu_selection > menu_count)
-                menu_selection = 0;
-        }
-
-        if (key == ' ')
-        {
-            GAME_STATE = PLAYING;
-        }
         break;
-
     case PLAYING:
     {
 
@@ -649,16 +661,6 @@ vector<float> ofApp::generate_random_grouped_z()
     {
         z.push_back(0.0);
     }
-
-    // for (int i = 0; i < num_vec_groups; i++)
-    // {
-    //     for (int v = 0; v < vecs_per_group; v++)
-    //     {
-    //         // set position but based on the shuffled associated vectors
-    //         // cout << shuffled_vecs[i * v] << endl;
-    //         z[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
-    //     }
-    // }
 
     int index = 0;
     for (int i = 0; i < num_vec_groups; i++)
