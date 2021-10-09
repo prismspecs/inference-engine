@@ -97,7 +97,7 @@ public:
 #define MENU 0
 #define PLAYING 1
 #define END 2
-	int GAME_STATE = 1;
+	int GAME_STATE = 0;
 
 	// ship vars
 	int active_vec = 0;
@@ -129,6 +129,9 @@ public:
 	ofxMidiIn midiIn;
 	std::vector<ofxMidiMessage> midiMessages;
 	std::size_t maxMessages = 10; // max number of messages to keep track of
+
+	// sound
+	ofSoundPlayer sound;
 
 	// debug, etc
 	int counter = 0;
