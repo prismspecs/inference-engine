@@ -52,7 +52,8 @@ public:
 	void update_position();
 	void change_heading(int &av);
 	void move_ship(float &direction);
-	void receive_controls(vector<float> &controls);
+	void receive_button(string & button);
+	void receive_control_vectors(vector<float> &controls);
 	void lerp_ship();
 
 	// callback functions that process what Runway sends back
@@ -68,7 +69,7 @@ public:
 	// game menu
 	ofTrueTypeFont font_menu;
 	int menu_selection = 0;
-	int menu_count = 0; // how many menu items
+	int menu_count = 1; // how many menu items
 
 	// effects etc
 	bool controls_changed = true;

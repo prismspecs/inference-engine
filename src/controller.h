@@ -8,12 +8,16 @@ class Controller
 public:
     ofEvent<int> headingChange;
     ofEvent<float> moveShip;
-    ofEvent<vector<float>> sendControls;
+    ofEvent<vector<float>> sendControlVectors;
+    
+    ofEvent<string> buttonPress;  // menu controls...
+
 
     Controller();
     void setup(int ncv);
     void update();
     void draw();
+    void reset(vector<float> z, vector<int> shuffled_vecs);
     double getAngleRads(ofVec2f a, ofVec2f b);
     void keyPressed(ofKeyEventArgs &e);
     void keyReleased(ofKeyEventArgs &e);
@@ -25,7 +29,6 @@ public:
     // diagnostic
     bool USE_GAMEPAD = false;
     bool USE_KEYBOARD = true;
-
     
     int num_vecs = 0;
 };

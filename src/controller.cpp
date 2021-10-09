@@ -23,6 +23,27 @@ void Controller::setup(int ncv)
     }
 }
 
+void Controller::reset(vector<float> z, vector<int> shuffled_vecs)
+{
+    // incoming 512 floats, shuffled
+    // need to unshuffle then i should see groups of 32 floats w same values
+    vector<float> unshuffled_controls;
+
+    // in unshuffled form they are grouped (as of now) in 32 floats
+    // so skip every 32 and add that to a vector, then map that onto the current controls
+    int controls_per_group = 512 / num_control_vecs;
+    for (int i = 0; i < z.size(); i += controls_per_group)
+    {
+        unshuffled_controls.push_back(z[shuffled_vecs[i]]);
+    }
+    for (int i = 0; i < controls.size(); i++)
+    {
+        cout << controls[i] << ", ";
+        controls[i] = unshuffled_controls[i];
+        cout << controls[i] << endl;
+    }
+}
+
 void Controller::update()
 {
 
@@ -50,6 +71,8 @@ void Controller::keyReleased(ofKeyEventArgs &e)
 {
     if (e.key == OF_KEY_LEFT)
     {
+        string button = "left";
+        ofNotifyEvent(buttonPress, button);
         active_vec--;
         if (active_vec < 0)
             active_vec = num_control_vecs - 1;
@@ -59,10 +82,30 @@ void Controller::keyReleased(ofKeyEventArgs &e)
 
     if (e.key == OF_KEY_RIGHT)
     {
+        string button = "right";
+        ofNotifyEvent(buttonPress, button);
         active_vec += 1;
         if (active_vec >= num_control_vecs)
             active_vec = 0;
         // ofNotifyEvent(headingChange, active_vec);
+    }
+
+    if (e.key == OF_KEY_UP)
+    {
+        string button = "up";
+        ofNotifyEvent(buttonPress, button);
+    }
+
+    if (e.key == OF_KEY_DOWN)
+    {
+        string button = "down";
+        ofNotifyEvent(buttonPress, button);
+    }
+
+    if (e.key == ' ')
+    {
+        string button = "fire";
+        ofNotifyEvent(buttonPress, button);
     }
 }
 
@@ -74,15 +117,14 @@ void Controller::keyPressed(ofKeyEventArgs &e)
     if (e.key == OF_KEY_UP)
     {
         controls[active_vec] += .01;
-        ofNotifyEvent(sendControls, controls);
+        ofNotifyEvent(sendControlVectors, controls);
     }
 
     if (e.key == OF_KEY_DOWN)
     {
         controls[active_vec] -= .01;
-        ofNotifyEvent(sendControls, controls);
+        ofNotifyEvent(sendControlVectors, controls);
     }
-
 }
 
 void Controller::draw()
