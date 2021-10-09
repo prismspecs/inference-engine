@@ -7,6 +7,10 @@ void ofApp::setup()
     // ofSetWindowShape(img_dims * 2, img_dims);
     ofSetWindowShape(img_dims, img_dims);
 
+    // sound
+    sound.load("sounds/music-test.mp3");
+    sound.play();
+
     // setup Runway
     runway.setup(this, "http://localhost:8000");
     runway.start();
@@ -35,7 +39,7 @@ void ofApp::setup()
         gui.setup(sliderGroup);
     }
 
-    ofTrueTypeFontSettings settings("../Ubuntu-B.ttf", 36);
+    ofTrueTypeFontSettings settings("fonts/ContrailOne-Regular.ttf", 48);
     font_menu.load(settings);
 
     // set up effects
@@ -64,8 +68,6 @@ void ofApp::setup()
     ofAddListener(controller.headingChange, this, &ofApp::change_heading);
     ofAddListener(controller.moveShip, this, &ofApp::move_ship);
     ofAddListener(controller.sendControls, this, &ofApp::receive_controls);
-
-    
 
     // // MIDI
     // // print input ports to console
@@ -211,9 +213,21 @@ void ofApp::draw()
         ofClear(0);
         if (menu_selection == 0)
         {
-            ofSetColor(255, 255, 0);
+            ofSetColor(255, 255, 50);
+            font_menu.drawString("start game", 100, ofGetHeight() / 2);
+
+            ofSetColor(50, 50, 50);
+            font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
         }
-        font_menu.drawString("start game", 100, 100);
+
+        if (menu_selection == 1)
+        {
+            ofSetColor(50, 50, 50);
+            font_menu.drawString("start game", 100, ofGetHeight() / 2);
+
+            ofSetColor(255, 255, 50);
+            font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
+        }
 
         break;
     }
@@ -328,7 +342,7 @@ void ofApp::newPosition()
 
     // generate a new random starting position taking into account
     // that vectors are now grouped randomly
-    
+
     starting_position = generate_random_grouped_z();
     target_position = generate_random_grouped_z();
     current_position = starting_position;
@@ -445,35 +459,32 @@ void ofApp::move_ship(float &direction)
 //--------------------------------------------------------------
 void ofApp::receive_controls(vector<float> &controls)
 {
-    // cout << "received controls event" << endl;
-    // for (int i = 0; i < controls.size(); i++)
-    // {
-    //     cout << i << ": " << controls[i] << " | ";
-    // }
-    // cout << endl;
 
-    // controls are grouped so that the limited number of controls
-    // can effect the larger vector of current_position
-    // for(int i = 0; i < 512; i++)
-    // {
-    //     current_position[shuffled_vecs[i]] = 
-    // }
-    int index = 0;
-    for (int i = 0; i < controls.size(); i++)
+    switch (GAME_STATE)
     {
-        // controls is a series of 16 floats
-        for (int v = 0; v < vecs_per_group; v++)
-        {
-            // shuffled_vecs[]
-            // cout << index++ << endl;
-            // set current position but based on the shuffled associated vectors
-            current_position[shuffled_vecs[index]] = controls[i];
+    case 0:
 
-            index++;
+        break;
+
+    case 1:
+        int index = 0;
+        for (int i = 0; i < controls.size(); i++)
+        {
+            // controls is a series of 16 floats
+            for (int v = 0; v < vecs_per_group; v++)
+            {
+                // set current position but based on the shuffled associated vectors
+                current_position[shuffled_vecs[index]] = controls[i];
+
+                index++;
+            }
         }
+        controls_changed = true;
+
+        break;
     }
 
-    // for(int i = 0; i < 512; i+=vecs_per_group) 
+    // for(int i = 0; i < 512; i+=vecs_per_group)
     // {
     //     for (int v = 0; v < vecs_per_group; v++)
     //     {
@@ -481,14 +492,12 @@ void ofApp::receive_controls(vector<float> &controls)
     //     }
     // }
 
-    controls_changed = true;
+        // ofFile floats("current_position.txt", ofFile::WriteOnly);
 
-    ofFile floats("current_position.txt", ofFile::WriteOnly);
-
-    for (int i = 0; i < 512; i++)
-    {
-        floats << ofToString(current_position[i]) << endl;
-    }
+        // for (int i = 0; i < 512; i++)
+        // {
+        //     floats << ofToString(current_position[i]) << endl;
+        // }
 }
 //--------------------------------------------------------------
 void ofApp::update_position()
@@ -562,6 +571,12 @@ void ofApp::keyReleased(int key)
 void ofApp::keyPressed(int key)
 {
 
+    if (key == ' ')
+    {
+        // sound.load("sounds/beam1.wav");
+        // sound.setMultiPlay(true);
+        // sound.play();
+    }
     if (key == 'x')
     {
         // move all sliders to correct values immediately

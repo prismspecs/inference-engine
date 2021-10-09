@@ -14,8 +14,6 @@ void Controller::setup(int ncv)
         controls.push_back(ofRandom(-1, 1));
     }
 
-    // restart(); // shuffle vector
-
     ofAddListener(ofEvents().keyPressed, this, &Controller::keyPressed);
     ofAddListener(ofEvents().keyReleased, this, &Controller::keyReleased);
 
@@ -23,25 +21,6 @@ void Controller::setup(int ncv)
     {
         ofxGLFWJoystick::one().printJoystickList();
     }
-}
-
-void Controller::restart()
-{
-    // ofRandomize(controls);
-
-    // for (int i = 0; i < num_control_vecs; i += vecs_per_group)
-    // {
-    //     float pos = ofRandom(-1, 1);
-    //     for (int v = 0; v < vecs_per_group; v++)
-    //     {
-    //         ship_position[controls[i + v]] = pos;
-    //     }
-    // }
-
-    // for (int i = 0; i < num_control_vecs; i++)
-    // {
-    //     cout << ship_position[i] << endl;
-    // }
 }
 
 void Controller::update()
@@ -92,8 +71,6 @@ void Controller::keyPressed(ofKeyEventArgs &e)
 
     float direction = 0.0;
 
-    // cout << "key pressed" << endl;
-
     if (e.key == OF_KEY_UP)
     {
         controls[active_vec] += .01;
@@ -106,27 +83,24 @@ void Controller::keyPressed(ofKeyEventArgs &e)
         ofNotifyEvent(sendControls, controls);
     }
 
-    // for (size_t i = 0; i < controls.size(); i++)
-    // {
-    //     cout << controls[i] << ", ";
-    // }
-
-    // cout << endl;
 }
 
 void Controller::draw()
 {
-    ofxGLFWJoystick::one().drawDebug(100, 100);
-    int joystickID = 0;
-    float joyX = ofxGLFWJoystick::one().getAxisValue(0, joystickID);
-    float joyY = ofxGLFWJoystick::one().getAxisValue(1, joystickID);
+    if (USE_GAMEPAD)
+    {
+        ofxGLFWJoystick::one().drawDebug(100, 100);
+        int joystickID = 0;
+        float joyX = ofxGLFWJoystick::one().getAxisValue(0, joystickID);
+        float joyY = ofxGLFWJoystick::one().getAxisValue(1, joystickID);
 
-    //lets map the joystick to our window size
-    float mappedX = ofMap(joyX, -1, 1, 0, ofGetWidth());
-    float mappedY = ofMap(joyY, -1, 1, 0, ofGetHeight());
+        //lets map the joystick to our window size
+        float mappedX = ofMap(joyX, -1, 1, 0, ofGetWidth());
+        float mappedY = ofMap(joyY, -1, 1, 0, ofGetHeight());
 
-    ofSetColor(255);
-    ofCircle(mappedX, mappedY, 3);
+        ofSetColor(255);
+        ofCircle(mappedX, mappedY, 3);
+    }
 }
 
 double Controller::getAngleRads(ofVec2f a, ofVec2f b)

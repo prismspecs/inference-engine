@@ -14,7 +14,6 @@ public:
     void setup(int ncv);
     void update();
     void draw();
-    void restart();
     double getAngleRads(ofVec2f a, ofVec2f b);
     void keyPressed(ofKeyEventArgs &e);
     void keyReleased(ofKeyEventArgs &e);
