@@ -7,7 +7,7 @@
 #include "imgwarp.h"
 #include "surface.h"
 #include "controller.h"
-#include "ofxGLFWJoystick.h"
+#include "sound.h"
 
 // make sure you make your ofApp or class to inherit from ofxRunwayListener
 class ofApp : public ofBaseApp, public ofxRunwayListener, public ofxMidiListener
@@ -17,13 +17,14 @@ public:
 	void setup();
 	void update();
 	void draw();
+	void draw_distance_indicator(float &distance);
 	void newPosition();
 	void exit();
 
 	void keyReleased(int key);
 	void keyPressed(int key);
 
-	void drawCenteredText(string str, ofColor color);
+	void draw_centered_text(string str, ofColor color);
 
 	// surfaces (main image contexts for game)
 	Surface surface_main;
@@ -50,9 +51,7 @@ public:
 	float find_distance(vector<float> a, vector<float> b);
 	void control_changed(ofAbstractParameter &e);
 	void update_position();
-	void change_heading(int &av);
-	void move_ship(float &direction);
-	void receive_button(string & button);
+	void receive_button(string &button);
 	void receive_control_vectors(vector<float> &controls);
 	void lerp_ship();
 
@@ -70,6 +69,9 @@ public:
 	ofTrueTypeFont font_menu;
 	int menu_selection = 0;
 	int menu_count = 1; // how many menu items
+	bool menu_startfade = false;
+	int menu_fadetime = 1000;
+	long menu_fadestartedtime = 0;
 
 	// effects etc
 	bool controls_changed = true;
@@ -78,7 +80,6 @@ public:
 	float lerp_amount = 0;
 	float lerp_speed = .005;
 
-	// vector<ofParameter<float>> floatSlider;
 	vector<int> next_image_loc; // where will next image go? (left or right)
 	long last_image_gen;
 	int image_gen_freq = 50; // how often we should request new image
@@ -86,6 +87,7 @@ public:
 #define TARGET_IMAGE 1
 
 	// game variables
+	float global_vector_speed = .02;
 	int img_dims = 1024;
 	float truncation = 1;
 	float min_max_vecs = 1;
@@ -99,6 +101,11 @@ public:
 #define PLAYING 1
 #define END 2
 	int GAME_STATE = 0;
+
+	// end game stuff
+	bool end_startfade = false;
+	int end_fadetime = 3000;
+	long end_fadestartedtime = 0;
 
 	// ship vars
 	int active_vec = 0;
@@ -132,7 +139,7 @@ public:
 	std::size_t maxMessages = 10; // max number of messages to keep track of
 
 	// sound
-	ofSoundPlayer sound;
+	Sound sound;
 
 	// debug, etc
 	int counter = 0;

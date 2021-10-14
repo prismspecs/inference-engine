@@ -6,15 +6,12 @@ class Controller
 {
 
 public:
-    ofEvent<int> headingChange;
-    ofEvent<float> moveShip;
     ofEvent<vector<float>> sendControlVectors;
-    
     ofEvent<string> buttonPress;  // menu controls...
 
 
     Controller();
-    void setup(int ncv);
+    void setup(int ncv, float vectorspeed);
     void update();
     void draw();
     void reset(vector<float> z, vector<int> shuffled_vecs);
@@ -25,6 +22,7 @@ public:
     vector<float> controls;
     int num_control_vecs = 16;
     int active_vec = 0;
+    float vector_speed = .01;
 
     // diagnostic
     bool USE_GAMEPAD = false;
