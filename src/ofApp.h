@@ -24,7 +24,7 @@ public:
 	void keyReleased(int key);
 	void keyPressed(int key);
 
-	void draw_centered_text(string str, ofColor color);
+	void draw_centered_text(string str, ofColor color, float offset);
 
 	// surfaces (main image contexts for game)
 	Surface surface_main;
@@ -59,6 +59,9 @@ public:
 	void runwayInfoEvent(ofJson &info);
 	void runwayErrorEvent(string &message);
 
+	// serial
+	ofSerial serial;
+
 	// gui
 	bool USE_GUI = false;
 	ofxPanel gui;
@@ -73,12 +76,20 @@ public:
 	int menu_fadetime = 1000;
 	long menu_fadestartedtime = 0;
 
-	// effects etc
+	// PLAYING state stuff
 	bool controls_changed = true;
 	long last_warp;
 	int warp_freq = 200; // how often we should request new image, was 200
 	float lerp_amount = 0;
-	float lerp_speed = .005;
+	float lerp_speed = .003;
+	bool game_startfade = false;
+	int game_fadetime = 1500;
+	long game_fadestartedtime = 0;
+
+	// end game stuff
+	bool end_startfade = false;
+	int end_fadetime = 6000;
+	long end_fadestartedtime = 0;
 
 	vector<int> next_image_loc; // where will next image go? (left or right)
 	long last_image_gen;
@@ -102,11 +113,6 @@ public:
 #define END 2
 	int GAME_STATE = 0;
 
-	// end game stuff
-	bool end_startfade = false;
-	int end_fadetime = 3000;
-	long end_fadestartedtime = 0;
-
 	// ship vars
 	int active_vec = 0;
 	// controller
@@ -119,7 +125,7 @@ public:
 	// fixed target image location and size for minimized target image
 	float tiX_min = img_dims - 220;
 	float tiY_min = tiX_min;
-	float tiD_min = 200;
+	float tiD_min = 360;
 	// fixed for maximized
 	float tiX_max, tiY_max = 0;
 	float tiD_max = img_dims;

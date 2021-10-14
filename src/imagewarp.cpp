@@ -46,5 +46,8 @@ void ImageWarp::draw()
     tex.bind();
     mesh.draw();
     tex.unbind();
+    ofSetColor(255,0,0);
+    ofFill();
+    ofRect(-111,-111,10,10);
     ofPopMatrix();
 }
