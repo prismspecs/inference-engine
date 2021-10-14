@@ -5,9 +5,10 @@ Controller::Controller()
 {
 }
 
-void Controller::setup(int ncv)
+void Controller::setup(int ncv, float vectorspeed)
 {
     num_control_vecs = ncv;
+    vector_speed = vectorspeed;
 
     for (int i = 0; i < num_control_vecs; i++)
     {
@@ -25,6 +26,9 @@ void Controller::setup(int ncv)
 
 void Controller::reset(vector<float> z, vector<int> shuffled_vecs)
 {
+    // set the controller's initial position to the randomly generated
+    // starting position of the player
+
     // incoming 512 floats, shuffled
     // need to unshuffle then i should see groups of 32 floats w same values
     vector<float> unshuffled_controls;
@@ -112,17 +116,15 @@ void Controller::keyReleased(ofKeyEventArgs &e)
 void Controller::keyPressed(ofKeyEventArgs &e)
 {
 
-    float direction = 0.0;
-
     if (e.key == OF_KEY_UP)
     {
-        controls[active_vec] += .01;
+        controls[active_vec] += vector_speed;
         ofNotifyEvent(sendControlVectors, controls);
     }
 
     if (e.key == OF_KEY_DOWN)
     {
-        controls[active_vec] -= .01;
+        controls[active_vec] -= vector_speed;
         ofNotifyEvent(sendControlVectors, controls);
     }
 }

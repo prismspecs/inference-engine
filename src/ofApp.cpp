@@ -4,12 +4,29 @@
 
 void ofApp::setup()
 {
-    // ofSetWindowShape(img_dims * 2, img_dims);
+    // GRAPHICS SETUP
     ofSetWindowShape(img_dims, img_dims);
+    ofSetBackgroundAuto(false);
+    ofDisableArbTex(); // important for texture mapping
+
+    ofTrueTypeFontSettings settings("fonts/ContrailOne-Regular.ttf", 48);
+    font_menu.load(settings);
+
+    // set up effects
+    origin = ofVec3f(512, 512, -100);
+
+    // ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
+    // warps.push_back(iw);
+    // ofSetBackgroundColor(0, 0, 0);
+    // ofEnableDepthTest();
+
+    // set up graphics contexts
+    currentFbo.allocate(img_dims, img_dims, GL_RGB);
+    targetFbo.allocate(img_dims, img_dims, GL_RGB);
+    surface_main.setup(origin, img_dims);
 
     // sound
-    sound.load("sounds/music-test.mp3");
-    sound.play();
+    sound.setup();
 
     // setup Runway
     runway.setup(this, "http://localhost:8000");
@@ -23,6 +40,7 @@ void ofApp::setup()
         {
             ofParameter<float> p;
             std::string name = "vec ";
+
             name += to_string(i);
 
             // make sure to randomize vecs because if they are set to 0 it gets funky
@@ -39,22 +57,6 @@ void ofApp::setup()
         gui.setup(sliderGroup);
     }
 
-    ofTrueTypeFontSettings settings("fonts/ContrailOne-Regular.ttf", 48);
-    font_menu.load(settings);
-
-    // set up effects
-    origin = ofVec3f(512, 512, -100);
-    ofDisableArbTex();
-    // ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
-    // warps.push_back(iw);
-    ofSetBackgroundColor(0, 0, 0);
-    // ofEnableDepthTest();
-
-    // set up graphics contexts
-    currentFbo.allocate(img_dims, img_dims, GL_RGB);
-    targetFbo.allocate(img_dims, img_dims, GL_RGB);
-    surface_main.setup(origin, img_dims);
-
     // set up game
     // map out the controls
     for (int i = 0; i < 512; i++)
@@ -63,9 +65,7 @@ void ofApp::setup()
     }
 
     // controller
-    controller.setup(num_vec_groups);
-    ofAddListener(controller.headingChange, this, &ofApp::change_heading);
-    ofAddListener(controller.moveShip, this, &ofApp::move_ship);
+    controller.setup(num_vec_groups, global_vector_speed);
     ofAddListener(controller.sendControlVectors, this, &ofApp::receive_control_vectors);
     ofAddListener(controller.buttonPress, this, &ofApp::receive_button);
 
@@ -97,11 +97,22 @@ void ofApp::update()
     // update controller
     controller.update();
 
+    // update sound
+    sound.update();
+
     switch (GAME_STATE)
     {
     case MENU:
     {
-
+        if (menu_startfade)
+        {
+            if (ofGetElapsedTimeMillis() > menu_fadestartedtime + menu_fadetime)
+            {
+                GAME_STATE = PLAYING;
+                menu_startfade = false;
+                newPosition();
+            }
+        }
         break;
     }
     case PLAYING:
@@ -110,10 +121,12 @@ void ofApp::update()
         // update distance
         distance = find_distance(target_position, current_position);
 
-        // they win!
-        if (distance < .5)
+        // VICTORY CONDITION
+        if (distance < 1)
         {
             GAME_STATE = END;
+            end_startfade = true;
+            end_fadestartedtime = ofGetElapsedTimeMillis();
         }
 
         if (next_image_loc.size() > 0)
@@ -199,6 +212,12 @@ void ofApp::update()
     }
     case END:
     {
+        if (ofGetElapsedTimeMillis() > end_fadestartedtime + end_fadetime)
+        {
+            GAME_STATE = MENU;
+            end_startfade = false;
+            
+        }
         break;
     }
     }
@@ -211,24 +230,33 @@ void ofApp::draw()
     {
     case MENU:
     {
-        // draw the menu
+
+        float op = 255;
         ofClear(0);
+
+        // draw the menu
+        if (menu_startfade)
+        {
+            // fade out over time
+            op = ofMap(ofGetElapsedTimeMillis(), menu_fadestartedtime,
+                       menu_fadestartedtime + menu_fadetime, 255, 0);
+        }
 
         if (menu_selection == 0)
         {
-            ofSetColor(255, 255, 50);
+            ofSetColor(255, 255, 50, op);
             font_menu.drawString("start game", 100, ofGetHeight() / 2);
 
-            ofSetColor(50, 50, 50);
+            ofSetColor(50, 50, 50, op);
             font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
         }
 
         if (menu_selection == 1)
         {
-            ofSetColor(50, 50, 50);
+            ofSetColor(50, 50, 50, op);
             font_menu.drawString("start game", 100, ofGetHeight() / 2);
 
-            ofSetColor(255, 255, 50);
+            ofSetColor(255, 255, 50, op);
             font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
         }
 
@@ -236,18 +264,7 @@ void ofApp::draw()
     }
     case PLAYING:
     {
-
-        // draw image received from Runway
-        // if (currentImg.isAllocated())
-        // {
-        //     ofEnableAlphaBlending();
-        //     currentFbo.begin();
-        //     ofSetColor(255, 255, 255, 15);
-        //     currentImg.draw(0, 0);
-        //     currentFbo.end();
-        //     ofDisableAlphaBlending();
-        //     currentFbo.draw(0, 0);
-        // }
+        ofClear(0);
 
         ofEnableAlphaBlending();
         surface_main.draw();
@@ -280,6 +297,9 @@ void ofApp::draw()
                 targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
 
                 targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+
+                float op = targetimg_dim / tiD_max * 255;
+                draw_centered_text("use the controls\nto pilot your ship here", ofColor(255, 255, 255, op));
             }
             else
             {
@@ -292,50 +312,77 @@ void ofApp::draw()
             }
         }
 
-        // draw distance indicator
-        ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
-        ofSetColor(0);
-        ofDrawRectangle(r);
-        string diststr = ofToString(distance);
-        ofSetColor(255);
-        ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
-
-        ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
-        float max_dist = sqrt(4 * num_isolated);
-        float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
-
-        ofRectangle distance_meter(10, ofGetHeight() - 40, mapped_dist, 20);
-        ofSetColor(0);
-        ofDrawRectangle(distance_bg);
-        ofSetColor(255);
-
-        ofDrawRectangle(distance_meter);
+        draw_distance_indicator(distance);
 
         if (USE_GUI)
         {
             gui.draw();
         }
 
+        // debug controller
+        controller.draw();
+
         break;
     }
     case END:
     {
 
-        // draw the menu
+        // draw the end screen
+        float op = 255;
         ofClear(0);
-        drawCenteredText("YOU WIN!", ofColor::yellow);
+
+        // draw the menu
+        if (end_startfade)
+        {
+            // fade out over time
+            op = ofMap(ofGetElapsedTimeMillis(), end_fadestartedtime,
+                       end_fadestartedtime + end_fadetime, 255, 0);
+        }
+
+        draw_centered_text("YOU WIN!", ofColor::yellow);
         break;
     }
     }
 
-    // debug controller
-    controller.draw();
+    // show fps
+    string str = ofToString(ofGetFrameRate());
+    ofSetColor(255);
+    ofDrawBitmapString(str, 10, 10);
 
     // save frames for video
     if (save_frames)
     {
         ofSaveScreen("frames/" + ofToString(ofGetFrameNum()) + ".png");
     }
+}
+//--------------------------------------------------------------
+void ofApp::draw_distance_indicator(float &distance)
+{
+    // plain text distance number
+    ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
+    ofSetColor(0);
+    ofDrawRectangle(r);
+    string diststr = ofToString(distance);
+    ofSetColor(255);
+    ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
+
+    // background for meter
+    ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
+    float max_dist = sqrt(4 * 512);
+    float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
+
+    ofRectangle distance_meter(10, ofGetHeight() - 40, mapped_dist, 20);
+    ofSetColor(0);
+    ofDrawRectangle(distance_bg);
+    ofSetColor(255);
+    // ofDrawRectangle(distance_meter);
+
+    ofVec3f arrowTailPoint(10, ofGetHeight() - 40, 0);
+    ofVec3f arrowHeadPoint(mapped_dist, ofGetHeight() - 40, 0);
+    ofDrawArrow(arrowTailPoint, arrowHeadPoint, 4.0);
+
+    ofSetColor(255);
+    ofDrawBitmapString(ofToString(controller.active_vec), 20, ofGetHeight() - 20);
 }
 //--------------------------------------------------------------
 void ofApp::newPosition()
@@ -350,8 +397,6 @@ void ofApp::newPosition()
     controller.reset(starting_position, shuffled_vecs); // make sure controller starts at correct pos
     target_position = generate_random_grouped_z();
     current_position = starting_position;
-
-
 
     // starting_position.clear();
     // for (int i = 0; i < 512; i++)
@@ -440,28 +485,13 @@ void ofApp::newPosition()
     warp_effect(currentImg.getTexture(), origin);
 }
 //--------------------------------------------------------------
-void ofApp::change_heading(int &av)
-{
-    active_vec = av;
-    controls_changed = true;
-
-    // cout << "received heading change" << endl;
-}
-
-//--------------------------------------------------------------
-void ofApp::move_ship(float &direction)
-{
-    // cout << "received move ship" << endl;
-    current_position[isolate_vectors[active_vec]] += .01 * direction;
-    controls_changed = true;
-}
-//--------------------------------------------------------------
 void ofApp::receive_button(string &button)
 {
     if (button == "up")
     {
         if (GAME_STATE == MENU)
         {
+            sound.play_once("menu_change");
             menu_selection--;
             if (menu_selection < 0)
                 menu_selection = menu_count;
@@ -472,6 +502,7 @@ void ofApp::receive_button(string &button)
     {
         if (GAME_STATE == MENU)
         {
+            sound.play_once("menu_change");
             menu_selection++;
             if (menu_selection > menu_count)
                 menu_selection = 0;
@@ -482,8 +513,13 @@ void ofApp::receive_button(string &button)
     {
         if (GAME_STATE == MENU)
         {
+            sound.play_once("menu_select");
             if (menu_selection == 0)
-                GAME_STATE = PLAYING;
+            {
+                //GAME_STATE = PLAYING;
+                menu_fadestartedtime = ofGetElapsedTimeMillis();
+                menu_startfade = true;
+            }
         }
     }
 }
@@ -512,23 +548,11 @@ void ofApp::receive_control_vectors(vector<float> &controls)
         }
         controls_changed = true;
 
+        // make some noise
+        sound.play_engine(active_vec, controls);
+
         break;
     }
-
-    // for(int i = 0; i < 512; i+=vecs_per_group)
-    // {
-    //     for (int v = 0; v < vecs_per_group; v++)
-    //     {
-    //         current_position[shuffled_vecs[i+v]] = controls[i];
-    //     }
-    // }
-
-    // ofFile floats("current_position.txt", ofFile::WriteOnly);
-
-    // for (int i = 0; i < 512; i++)
-    // {
-    //     floats << ofToString(current_position[i]) << endl;
-    // }
 }
 //--------------------------------------------------------------
 void ofApp::update_position()
@@ -585,19 +609,10 @@ void ofApp::keyPressed(int key)
 
     if (key == ' ')
     {
-        // sound.load("sounds/beam1.wav");
-        // sound.setMultiPlay(true);
-        // sound.play();
     }
     if (key == 'x')
     {
-        // move all sliders to correct values immediately
-        for (size_t i{0}; i < num_isolated; ++i)
-        {
-            vecs.at(i).set(target_position[isolate_vectors[i]]);
-        }
-
-        generate_image(current_position, truncation, CURRENT_IMAGE);
+        current_position = target_position;
     }
 
     if (key == 'c')
@@ -608,17 +623,29 @@ void ofApp::keyPressed(int key)
 //--------------------------------------------------------------
 void ofApp::lerp_ship()
 {
-    // move all sliders to correct values slowly
-    for (size_t i{0}; i < num_isolated; ++i)
+    // // move all sliders to correct values slowly
+    // for (size_t i{0}; i < num_isolated; ++i)
+    // {
+    //     float lerped = ofLerp(starting_position[isolate_vectors[i]], target_position[isolate_vectors[i]], lerp_amount);
+    //     vecs.at(i).set(lerped);
+    // }
+
+    // lerp_amount += lerp_speed;
+    // lerp_amount = ofClamp(lerp_amount, 0, 1);
+
+    // generate_image(current_position, truncation, CURRENT_IMAGE);
+
+    for(int i = 0; i < current_position.size(); i++)
     {
-        float lerped = ofLerp(starting_position[isolate_vectors[i]], target_position[isolate_vectors[i]], lerp_amount);
-        vecs.at(i).set(lerped);
+        float lerped = ofLerp(starting_position[i], target_position[i], lerp_amount);
+        current_position[i] = lerped;
     }
 
     lerp_amount += lerp_speed;
     lerp_amount = ofClamp(lerp_amount, 0, 1);
 
-    generate_image(current_position, truncation, CURRENT_IMAGE);
+    controls_changed = true;
+
 }
 //--------------------------------------------------------------
 void ofApp::control_changed(ofAbstractParameter &e)
@@ -815,7 +842,7 @@ void ofApp::newMidiMessage(ofxMidiMessage &msg)
 }
 
 //--------------------------------------------------------------
-void ofApp::drawCenteredText(string str, ofColor color)
+void ofApp::draw_centered_text(string str, ofColor color)
 {
     ofSetColor(color);
     font_menu.drawString(str, ofGetWidth() / 2 - font_menu.stringWidth(str) / 2, ofGetHeight() / 2 - font_menu.stringHeight(str) / 2);

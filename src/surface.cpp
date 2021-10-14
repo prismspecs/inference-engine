@@ -9,7 +9,8 @@ void Surface::setup(ofVec3f pos, int dims)
     position = pos;
     dimensions = dims;
 
-    fbo.allocate(dimensions, dimensions, GL_RGB);
+    // use floating point fbo to eliminate trails problem
+    fbo.allocate(dimensions, dimensions, GL_RGBA32F_ARB);
 
     // create a quad mesh
     // first triangle
@@ -45,7 +46,7 @@ void Surface::draw()
 
         ofEnableAlphaBlending();
         fbo.begin();
-        ofSetColor(255, 255, 255, 15);
+        ofSetColor(255, 255, 255, 10);
         texture.draw(0, 0);
         fbo.end();
         ofDisableAlphaBlending();
