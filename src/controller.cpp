@@ -9,10 +9,13 @@ void Controller::setup(int ncv, float vectorspeed)
 {
     num_control_vecs = ncv;
     vector_speed = vectorspeed;
+    // so i can draw a grid of controls
+    num_controls_root = sqrt(num_control_vecs);
 
     for (int i = 0; i < num_control_vecs; i++)
     {
         controls.push_back(ofRandom(-1, 1));
+        target_controls.push_back(ofRandom(-1, 1));
     }
 
     ofAddListener(ofEvents().keyPressed, this, &Controller::keyPressed);
@@ -24,7 +27,7 @@ void Controller::setup(int ncv, float vectorspeed)
     }
 }
 
-void Controller::reset(vector<float> z, vector<int> shuffled_vecs)
+void Controller::reset(vector<float> current_pos, vector<float> target_pos, vector<int> shuffled_vecs)
 {
     // set the controller's initial position to the randomly generated
     // starting position of the player
@@ -32,22 +35,36 @@ void Controller::reset(vector<float> z, vector<int> shuffled_vecs)
     // incoming 512 floats, shuffled
     // need to unshuffle then i should see groups of 32 floats w same values
     vector<float> unshuffled_controls;
+    // also for target
+    vector<float> unshuffled_targets;
 
     // in unshuffled form they are grouped (as of now) in 32 floats
     // so skip every 32 and add that to a vector, then map that onto the current controls
     int controls_per_group = 512 / num_control_vecs;
-    for (int i = 0; i < z.size(); i += controls_per_group)
+    for (int i = 0; i < current_pos.size(); i += controls_per_group)
     {
-        unshuffled_controls.push_back(z[shuffled_vecs[i]]);
+        unshuffled_controls.push_back(current_pos[shuffled_vecs[i]]);
+        unshuffled_targets.push_back(target_pos[shuffled_vecs[i]]);
     }
     for (int i = 0; i < controls.size(); i++)
     {
-        cout << controls[i] << ", ";
         controls[i] = unshuffled_controls[i];
-        cout << controls[i] << endl;
+        target_controls[i] = unshuffled_targets[i];
     }
 }
-
+void Controller::receive_serial(int &inByte)
+{
+    if (inByte == 0)
+    {
+        controls[active_vec] -= vector_speed;
+        ofNotifyEvent(sendControlVectors, controls);
+    }
+    if (inByte == 1)
+    {
+        controls[active_vec] += vector_speed;
+        ofNotifyEvent(sendControlVectors, controls);
+    }
+}
 void Controller::update()
 {
 
@@ -144,6 +161,27 @@ void Controller::draw()
 
         ofSetColor(255);
         ofCircle(mappedX, mappedY, 3);
+    }
+
+    int i = 0;
+    for (int y = 0; y < num_controls_root; y++)
+    {
+        for (int x = 0; x < num_controls_root; x++)
+        {
+            float _x = controls_start_x + (x * controls_dims / num_controls_root);
+            float _y = controls_start_y + (y * controls_dims / num_controls_root);
+            ofSetColor(255,255,0);
+            ofCircle(_x, _y, controls_dims / num_controls_root/2, controls_dims / num_controls_root/2);
+
+            // draw current position
+            float diff = abs(controls[i] - target_controls[i]);
+            ofSetColor(0);
+            ofDrawBitmapString(controls[i],_x,_y);
+            ofSetColor(255,0,0);
+            ofDrawBitmapString(diff,_x,_y+ 12);
+
+            i++;
+        }
     }
 }
 

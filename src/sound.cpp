@@ -11,6 +11,7 @@ void Sound::setup()
     
     menu_change.load("sounds/menu_change.wav");
     menu_select.load("sounds/menu_select.wav");
+    victory.load("sounds/victory.wav");
 }
 
 void Sound::update()
@@ -30,6 +31,11 @@ void Sound::play_once(string which_sound)
     if(which_sound == "menu_select")
     {
         menu_select.play();
+    }
+
+    if(which_sound == "victory")
+    {
+        victory.play();
     }
 }
 

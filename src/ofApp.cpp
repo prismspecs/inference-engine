@@ -5,15 +5,21 @@
 void ofApp::setup()
 {
     // GRAPHICS SETUP
-    ofSetWindowShape(img_dims, img_dims);
+    // ofSetWindowShape(img_dims, img_dims);
     ofSetBackgroundAuto(false);
     ofDisableArbTex(); // important for texture mapping
 
     ofTrueTypeFontSettings settings("fonts/ContrailOne-Regular.ttf", 48);
     font_menu.load(settings);
 
+    // serial
+    serial.listDevices();
+    vector<ofSerialDeviceInfo> deviceList = serial.getDeviceList();
+    serial.setup(0, 115200);
+
     // set up effects
-    origin = ofVec3f(512, 512, -100);
+    // origin = ofVec3f(512, 512, -100);
+    origin = ofVec3f(ofGetWidth()/2, ofGetHeight()/2, 0);
 
     // ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
     // warps.push_back(iw);
@@ -24,6 +30,13 @@ void ofApp::setup()
     currentFbo.allocate(img_dims, img_dims, GL_RGB);
     targetFbo.allocate(img_dims, img_dims, GL_RGB);
     surface_main.setup(origin, img_dims);
+
+    // position the target image
+    tiX_min = ofGetWidth()/2 + img_dims/2 + 20;
+    tiY_min = ofGetHeight()/2 + 140;
+    tiX_max = origin.x - img_dims/2;
+    tiY_max = origin.y - img_dims/2;
+    cout << tiX_max << endl;
 
     // sound
     sound.setup();
@@ -70,29 +83,24 @@ void ofApp::setup()
     ofAddListener(controller.buttonPress, this, &ofApp::receive_button);
 
     newPosition();
-
-    // // MIDI
-    // // print input ports to console
-    // midiIn.listInPorts();
-
-    // // open port by number (you may need to change this)
-    // //midiIn.openPort(1);
-    // //cout << midiIn.getName() << endl;
-    // midiIn.openPort("Launch Control XL:Launch Control XL MIDI 1 28:0"); // by name
-
-    // // don't ignore sysex, timing, & active sense messages,
-    // // these are ignored by default
-    // midiIn.ignoreTypes(false, false, false);
-
-    // // add ofApp as a listener
-    // midiIn.addListener(this);
-
-    // // print received messages to the console
-    // midiIn.setVerbose(true);
 }
 //--------------------------------------------------------------
 void ofApp::update()
 {
+
+    // read serial
+    int myByte = -1;
+    myByte = serial.readByte();
+    if (myByte == OF_SERIAL_NO_DATA)
+    {
+    }
+    else if (myByte == OF_SERIAL_ERROR)
+    {
+    }
+    else
+    {
+        controller.receive_serial(myByte);
+    }
 
     // update controller
     controller.update();
@@ -110,6 +118,8 @@ void ofApp::update()
             {
                 GAME_STATE = PLAYING;
                 menu_startfade = false;
+                game_startfade = true; // help to cover up loading
+                game_fadestartedtime = ofGetElapsedTimeMillis();
                 newPosition();
             }
         }
@@ -117,6 +127,14 @@ void ofApp::update()
     }
     case PLAYING:
     {
+
+        if (game_startfade)
+        {
+            if (ofGetElapsedTimeMillis() > game_fadestartedtime + game_fadetime)
+            {
+                game_startfade = false;
+            }
+        }
 
         // update distance
         distance = find_distance(target_position, current_position);
@@ -127,6 +145,7 @@ void ofApp::update()
             GAME_STATE = END;
             end_startfade = true;
             end_fadestartedtime = ofGetElapsedTimeMillis();
+            sound.play_once("victory");
         }
 
         if (next_image_loc.size() > 0)
@@ -182,31 +201,17 @@ void ofApp::update()
         }
 
         // update effects
-        for (int i = warps.size() - 1; i >= 0; i--)
-        {
-            warps[i].update();
+        // for (int i = warps.size() - 1; i >= 0; i--)
+        // {
+        //     warps[i].update();
 
-            if (warps[i].alpha <= 0)
-            {
-                warps.erase(warps.begin() + i);
-            }
-        }
+        //     if (warps[i].alpha <= 0)
+        //     {
+        //         warps.erase(warps.begin() + i);
+        //     }
+        // }
 
         // HUD
-
-        // MIDI
-        for (unsigned int i = 0; i < midiMessages.size(); ++i)
-        {
-            ofxMidiMessage &message = midiMessages[i];
-
-            int c = message.control - 1;
-
-            if (c < num_isolated)
-            {
-                vecs.at(c) = ofMap(message.value, 0, 127, -min_max_vecs, min_max_vecs);
-                update_position();
-            }
-        }
 
         break;
     }
@@ -216,7 +221,6 @@ void ofApp::update()
         {
             GAME_STATE = MENU;
             end_startfade = false;
-            
         }
         break;
     }
@@ -299,16 +303,18 @@ void ofApp::draw()
                 targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
 
                 float op = targetimg_dim / tiD_max * 255;
-                draw_centered_text("use the controls\nto pilot your ship here", ofColor(255, 255, 255, op));
+                draw_centered_text("use the controls\nto pilot your ship here", ofColor(255, 255, 255, op), 0);
             }
             else
             {
-
+                
                 targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
                 targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
                 targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
 
                 targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
+
+                ofDrawBitmapString("TARGET DESINATION:", targetimg_x, targetimg_y - 10);
             }
         }
 
@@ -322,6 +328,20 @@ void ofApp::draw()
         // debug controller
         controller.draw();
 
+        if (game_startfade)
+        {
+            // fade out over time
+            float op = ofMap(ofGetElapsedTimeMillis(), game_fadestartedtime,
+                             game_fadestartedtime + game_fadetime, 512, 0);
+
+            // mapping from 512 is a quick hack to make it completely opaque for the first half
+            ofSetColor(0, op);
+            ofFill();
+            ofEnableAlphaBlending();
+            ofRect(0, 0, ofGetWidth(), ofGetHeight());
+            ofDisableAlphaBlending();
+        }
+
         break;
     }
     case END:
@@ -331,15 +351,20 @@ void ofApp::draw()
         float op = 255;
         ofClear(0);
 
+        surface_main.draw();
+
         // draw the menu
         if (end_startfade)
         {
             // fade out over time
             op = ofMap(ofGetElapsedTimeMillis(), end_fadestartedtime,
-                       end_fadestartedtime + end_fadetime, 255, 0);
+                       end_fadestartedtime + end_fadetime, 0, 512);
+            // 512 is a trick to fade in faster then stay fully opaque
         }
+        op = ofClamp(op, 0, 255);
 
-        draw_centered_text("YOU WIN!", ofColor::yellow);
+        draw_centered_text("YOU WIN!", ofColor(0, op), 4);
+        draw_centered_text("YOU WIN!", ofColor(255, 255, 0, op), 0);
         break;
     }
     }
@@ -394,8 +419,8 @@ void ofApp::newPosition()
     // that vectors are now grouped randomly
 
     starting_position = generate_random_grouped_z();
-    controller.reset(starting_position, shuffled_vecs); // make sure controller starts at correct pos
     target_position = generate_random_grouped_z();
+    controller.reset(starting_position, target_position, shuffled_vecs); // make sure controller starts at correct pos
     current_position = starting_position;
 
     // starting_position.clear();
@@ -635,7 +660,7 @@ void ofApp::lerp_ship()
 
     // generate_image(current_position, truncation, CURRENT_IMAGE);
 
-    for(int i = 0; i < current_position.size(); i++)
+    for (int i = 0; i < current_position.size(); i++)
     {
         float lerped = ofLerp(starting_position[i], target_position[i], lerp_amount);
         current_position[i] = lerped;
@@ -645,7 +670,6 @@ void ofApp::lerp_ship()
     lerp_amount = ofClamp(lerp_amount, 0, 1);
 
     controls_changed = true;
-
 }
 //--------------------------------------------------------------
 void ofApp::control_changed(ofAbstractParameter &e)
@@ -842,8 +866,43 @@ void ofApp::newMidiMessage(ofxMidiMessage &msg)
 }
 
 //--------------------------------------------------------------
-void ofApp::draw_centered_text(string str, ofColor color)
+void ofApp::draw_centered_text(string str, ofColor color, float offset)
 {
     ofSetColor(color);
-    font_menu.drawString(str, ofGetWidth() / 2 - font_menu.stringWidth(str) / 2, ofGetHeight() / 2 - font_menu.stringHeight(str) / 2);
+    font_menu.drawString(str, ofGetWidth() / 2 - font_menu.stringWidth(str) / 2 + offset, ofGetHeight() / 2 - font_menu.stringHeight(str) / 2 + offset);
 }
+
+// OLD CODE
+
+// // MIDI
+// // print input ports to console
+// midiIn.listInPorts();
+
+// // open port by number (you may need to change this)
+// //midiIn.openPort(1);
+// //cout << midiIn.getName() << endl;
+// midiIn.openPort("Launch Control XL:Launch Control XL MIDI 1 28:0"); // by name
+
+// // don't ignore sysex, timing, & active sense messages,
+// // these are ignored by default
+// midiIn.ignoreTypes(false, false, false);
+
+// // add ofApp as a listener
+// midiIn.addListener(this);
+
+// // print received messages to the console
+// midiIn.setVerbose(true);
+
+// MIDI
+// for (unsigned int i = 0; i < midiMessages.size(); ++i)
+// {
+//     ofxMidiMessage &message = midiMessages[i];
+
+//     int c = message.control - 1;
+
+//     if (c < num_isolated)
+//     {
+//         vecs.at(c) = ofMap(message.value, 0, 127, -min_max_vecs, min_max_vecs);
+//         update_position();
+//     }
+// }

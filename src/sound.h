@@ -9,6 +9,7 @@ public:
 
     ofSoundPlayer music;
     ofSoundPlayer menu_select, menu_change;
+    ofSoundPlayer victory;
     ofSoundPlayer engine;
 
     // keep track of previous controls so we can look at the difference
