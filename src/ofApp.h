@@ -53,6 +53,7 @@ public:
 	void update_position();
 	void receive_button(string &button);
 	void receive_control_vectors(vector<float> &controls);
+	void change_active_vec(int &vec);
 	void lerp_ship();
 
 	// callback functions that process what Runway sends back
@@ -88,7 +89,7 @@ public:
 
 	// end game stuff
 	bool end_startfade = false;
-	int end_fadetime = 6000;
+	int end_fadetime = 8000;
 	long end_fadestartedtime = 0;
 
 	vector<int> next_image_loc; // where will next image go? (left or right)
@@ -100,7 +101,7 @@ public:
 	// game variables
 	float global_vector_speed = .02;
 	int img_dims = 1024;
-	float truncation = 1;
+	float truncation = .9;
 	float min_max_vecs = 1;
 	vector<float> starting_position;
 	vector<float> current_position;
@@ -123,11 +124,12 @@ public:
 
 	// HUD variables
 	// fixed target image location and size for minimized target image
-	float tiX_min = img_dims - 220;
-	float tiY_min = tiX_min;
-	float tiD_min = 360;
+	float tiX_min = 1492;
+	float tiY_min = 584;
+	float tiD_min = 408;
 	// fixed for maximized
-	float tiX_max, tiY_max = 0;
+	float tiX_max = 448;
+	float tiY_max = 28;
 	float tiD_max = img_dims;
 
 	bool targetimg_maximized = false; // keep track of whether its minimzed or maximized
