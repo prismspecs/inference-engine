@@ -7,6 +7,9 @@ RUN pip install runway-python
 RUN pip install moviepy
 RUN pip install opensimplex
 RUN apt-get update && apt-get install -y ffmpeg
+# for torch stuff
+RUN pip install torch
+RUN pip install ninja
 # make all files created belong to me instead of docker root
 RUN usermod -u 1000 www-data
 RUN usermod -G staff www-data

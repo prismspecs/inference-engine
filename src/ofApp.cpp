@@ -19,7 +19,7 @@ void ofApp::setup()
 
     // set up effects
     // origin = ofVec3f(512, 512, -100);
-    origin = ofVec3f(ofGetWidth()/2, ofGetHeight()/2, 0);
+    origin = ofVec3f(ofGetWidth() / 2, ofGetHeight() / 2, 0);
 
     // ImageWarp iw = ImageWarp(currentImg.getTexture(), origin);
     // warps.push_back(iw);
@@ -31,15 +31,9 @@ void ofApp::setup()
     targetFbo.allocate(img_dims, img_dims, GL_RGB);
     surface_main.setup(origin, img_dims);
 
-    // position the target image
-    tiX_min = ofGetWidth()/2 + img_dims/2 + 20;
-    tiY_min = ofGetHeight()/2 + 140;
-    tiX_max = origin.x - img_dims/2;
-    tiY_max = origin.y - img_dims/2;
-    cout << tiX_max << endl;
-
     // sound
     sound.setup();
+    sound.menu_start();
 
     // setup Runway
     runway.setup(this, "http://localhost:8000");
@@ -57,7 +51,7 @@ void ofApp::setup()
             name += to_string(i);
 
             // make sure to randomize vecs because if they are set to 0 it gets funky
-            float rand = ofRandom(-1, 1);
+            float rand = ofRandom(-min_max_vecs, min_max_vecs);
 
             p.set(name, rand, -min_max_vecs, min_max_vecs);
             // p.addListener(this, &ofApp::control_changed);
@@ -81,6 +75,7 @@ void ofApp::setup()
     controller.setup(num_vec_groups, global_vector_speed);
     ofAddListener(controller.sendControlVectors, this, &ofApp::receive_control_vectors);
     ofAddListener(controller.buttonPress, this, &ofApp::receive_button);
+    ofAddListener(controller.activeVecChanged, this, &ofApp::change_active_vec);
 
     newPosition();
 }
@@ -121,6 +116,10 @@ void ofApp::update()
                 game_startfade = true; // help to cover up loading
                 game_fadestartedtime = ofGetElapsedTimeMillis();
                 newPosition();
+
+                // end menu music loop, begin game music loop
+                sound.menu_end();
+                sound.game_start();
             }
         }
         break;
@@ -146,6 +145,9 @@ void ofApp::update()
             end_startfade = true;
             end_fadestartedtime = ofGetElapsedTimeMillis();
             sound.play_once("victory");
+
+            // end game music loop
+            sound.game_end();
         }
 
         if (next_image_loc.size() > 0)
@@ -221,6 +223,8 @@ void ofApp::update()
         {
             GAME_STATE = MENU;
             end_startfade = false;
+            // end game music loop
+            sound.menu_start();
         }
         break;
     }
@@ -264,6 +268,20 @@ void ofApp::draw()
             font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
         }
 
+        // // testing
+        // // controls
+        // ofSetColor(255, 255, 0);
+        // ofRect(20, 162, 408, 700);
+        // // main surface
+        // ofSetColor(0, 255, 255);
+        // ofRect(448, 28, 1024, 1024);
+        // // top right thing
+        // ofSetColor(255, 0, 255);
+        // ofRect(1492, 88, 408, 408);
+        // // target img
+        // ofSetColor(22, 255, 66);
+        // ofRect(1492, 584, 408, 408);
+
         break;
     }
     case PLAYING:
@@ -273,6 +291,12 @@ void ofApp::draw()
         ofEnableAlphaBlending();
         surface_main.draw();
         ofDisableAlphaBlending();
+
+        // ofMesh mesh = make_mesh(currentImg);
+        // ofPushMatrix();
+        // ofTranslate(448,28);
+        // mesh.draw();
+        // ofPopMatrix();
 
         // ofEnableAlphaBlending();
         // // show zooming images
@@ -307,7 +331,7 @@ void ofApp::draw()
             }
             else
             {
-                
+
                 targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
                 targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
                 targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
@@ -580,6 +604,13 @@ void ofApp::receive_control_vectors(vector<float> &controls)
     }
 }
 //--------------------------------------------------------------
+void ofApp::change_active_vec(int &vec)
+{
+    sound.change_active_vec(vec);
+
+    //cout << "" << vec << endl;
+}
+//--------------------------------------------------------------
 void ofApp::update_position()
 {
 
@@ -660,15 +691,7 @@ void ofApp::lerp_ship()
 
     // generate_image(current_position, truncation, CURRENT_IMAGE);
 
-    for (int i = 0; i < current_position.size(); i++)
-    {
-        float lerped = ofLerp(starting_position[i], target_position[i], lerp_amount);
-        current_position[i] = lerped;
-    }
-
-    lerp_amount += lerp_speed;
-    lerp_amount = ofClamp(lerp_amount, 0, 1);
-
+    controller.lerp_ship();
     controls_changed = true;
 }
 //--------------------------------------------------------------
@@ -677,10 +700,6 @@ void ofApp::control_changed(ofAbstractParameter &e)
 
     update_position();
     controls_changed = true;
-
-    // probably shouldnt generate a new image every time the controls change
-    // because they work faster than the framerate
-    // generate_image(current_position, truncation, CURRENT_IMAGE);
 }
 //--------------------------------------------------------------
 void ofApp::warp_effect(ofTexture &texture, ofVec3f location)

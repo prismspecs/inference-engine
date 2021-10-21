@@ -1,6 +1,7 @@
 #ifndef _CONTROLLER
 #define _CONTROLLER
 #include "ofMain.h"
+#include "vector_display.h"
 
 class Controller
 {
@@ -8,7 +9,7 @@ class Controller
 public:
     ofEvent<vector<float>> sendControlVectors;
     ofEvent<string> buttonPress;  // menu controls...
-
+    ofEvent<int> activeVecChanged;
 
     Controller();
     void setup(int ncv, float vectorspeed);
@@ -19,6 +20,11 @@ public:
     void keyPressed(ofKeyEventArgs &e);
     void keyReleased(ofKeyEventArgs &e);
     void receive_serial(int &inByte);
+    void lerp_ship();
+
+    // diagnostic lerping
+    float lerp_amount = 0;
+    float lerp_speed = .0001;
 
     vector<float> controls;
     vector<float> target_controls;
@@ -27,10 +33,15 @@ public:
     int active_vec = 0;
     float vector_speed = .01;
 
-    // drawing
-    float controls_start_x = 1920/2 + 512 + 30;
-    float controls_start_y = 56 + 50;
-    float controls_dims = 408;
+    // drawing vector readouts
+    vector<VecDisplay> vec_displays;
+    float controls_start_x = 20;
+    float controls_start_y = 162;
+    float controls_dim_x = 408;
+    float controls_dim_y = 700;
+    float control_dim_x = controls_dim_x/4;
+    float control_dim_y = controls_dim_y/4;
+
 
     // diagnostic
     bool USE_GAMEPAD = false;

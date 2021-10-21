@@ -1,5 +1,4 @@
 #include "controller.h"
-#include "ofxGLFWJoystick.h"
 
 Controller::Controller()
 {
@@ -21,9 +20,19 @@ void Controller::setup(int ncv, float vectorspeed)
     ofAddListener(ofEvents().keyPressed, this, &Controller::keyPressed);
     ofAddListener(ofEvents().keyReleased, this, &Controller::keyReleased);
 
-    if (USE_GAMEPAD)
+    // set up vector readouts
+    int i = 0;
+    for (int y = 0; y < num_controls_root; y++)
     {
-        ofxGLFWJoystick::one().printJoystickList();
+        for (int x = 0; x < num_controls_root; x++)
+        {
+            float _x = controls_start_x + (x * control_dim_x) + control_dim_x / 2;
+            float _y = controls_start_y + (y * control_dim_y) + control_dim_y / 2;
+
+            VecDisplay v;
+            v.setup(_x, _y, control_dim_x * .4);
+            vec_displays.push_back(v);
+        }
     }
 }
 
@@ -51,6 +60,8 @@ void Controller::reset(vector<float> current_pos, vector<float> target_pos, vect
         controls[i] = unshuffled_controls[i];
         target_controls[i] = unshuffled_targets[i];
     }
+
+    lerp_amount = 0;
 }
 void Controller::receive_serial(int &inByte)
 {
@@ -68,24 +79,35 @@ void Controller::receive_serial(int &inByte)
 void Controller::update()
 {
 
-    if (USE_GAMEPAD)
+    for (int i = 0; i < controls.size(); i++)
     {
-        ofxGLFWJoystick::one().update();
+        // draw current position
+        float diff = abs(controls[i] - target_controls[i]);
+        vec_displays[i].diff = diff;
 
-        float joyX = ofxGLFWJoystick::one().getAxisValue(0, 0);
-        float joyY = ofxGLFWJoystick::one().getAxisValue(1, 0);
+        if (i == active_vec)
+        {
+            vec_displays[i].active = true;
+        }
+        else
+        {
+            vec_displays[i].active = false;
+        }
 
-        double rads = getAngleRads(ofVec2f(ofGetWidth() / 2, ofGetHeight() / 2), ofVec2f(joyX, joyY));
-        float degs = ofRadToDeg(rads);
-        // cout << rads << ", " << degs << endl;
-
-        active_vec = ofMap(rads, 0, TWO_PI, 0, 8); // assume x controllable vectors
+        vec_displays[i].update();
     }
+}
 
-    // stopped here... make a circular selection menu so player can having a heading
-    // in the direction of a vector
-
-    // cout << active_vec << endl;
+void Controller::lerp_ship()
+{
+    for (int i = 0; i < controls.size(); i++)
+    {
+        float lerped = ofLerp(controls[i], target_controls[i], lerp_amount);
+        controls[i] = lerped;
+    }
+    ofNotifyEvent(sendControlVectors, controls);
+    lerp_amount += lerp_speed;
+    lerp_amount = ofClamp(lerp_amount, 0, 1);
 }
 
 void Controller::keyReleased(ofKeyEventArgs &e)
@@ -98,7 +120,8 @@ void Controller::keyReleased(ofKeyEventArgs &e)
         if (active_vec < 0)
             active_vec = num_control_vecs - 1;
 
-        // ofNotifyEvent(headingChange, active_vec);
+        ofNotifyEvent(activeVecChanged, active_vec);
+
     }
 
     if (e.key == OF_KEY_RIGHT)
@@ -108,7 +131,8 @@ void Controller::keyReleased(ofKeyEventArgs &e)
         active_vec += 1;
         if (active_vec >= num_control_vecs)
             active_vec = 0;
-        // ofNotifyEvent(headingChange, active_vec);
+
+        ofNotifyEvent(activeVecChanged, active_vec);
     }
 
     if (e.key == OF_KEY_UP)
@@ -148,40 +172,35 @@ void Controller::keyPressed(ofKeyEventArgs &e)
 
 void Controller::draw()
 {
-    if (USE_GAMEPAD)
+
+    // int i = 0;
+    // for (int y = 0; y < num_controls_root; y++)
+    // {
+    //     for (int x = 0; x < num_controls_root; x++)
+    //     {
+    //         float _x = controls_start_x + (x * control_dim_x) + control_dim_x / 2;
+    //         float _y = controls_start_y + (y * control_dim_y) + control_dim_y / 2;
+
+    //         ofSetColor(255, 255, 0);
+    //         ofCircle(_x , _y , control_dim_x *.4);
+    //         // ofRect(_x, _y, control_dim_x, control_dim_y);
+
+    //         // draw current position
+    //         float diff = abs(controls[i] - target_controls[i]);
+    //         ofSetColor(0);
+    //         ofDrawBitmapString(controls[i], _x, _y);
+    //         ofSetColor(255, 0, 0);
+    //         ofDrawBitmapString(ofToString(diff,2), _x, _y + 12);
+
+    //         i++;
+    //     }
+    // }
+    ofSetCircleResolution(12);
+    ofNoFill();
+
+    for (int i = 0; i < vec_displays.size(); i++)
     {
-        ofxGLFWJoystick::one().drawDebug(100, 100);
-        int joystickID = 0;
-        float joyX = ofxGLFWJoystick::one().getAxisValue(0, joystickID);
-        float joyY = ofxGLFWJoystick::one().getAxisValue(1, joystickID);
-
-        //lets map the joystick to our window size
-        float mappedX = ofMap(joyX, -1, 1, 0, ofGetWidth());
-        float mappedY = ofMap(joyY, -1, 1, 0, ofGetHeight());
-
-        ofSetColor(255);
-        ofCircle(mappedX, mappedY, 3);
-    }
-
-    int i = 0;
-    for (int y = 0; y < num_controls_root; y++)
-    {
-        for (int x = 0; x < num_controls_root; x++)
-        {
-            float _x = controls_start_x + (x * controls_dims / num_controls_root);
-            float _y = controls_start_y + (y * controls_dims / num_controls_root);
-            ofSetColor(255,255,0);
-            ofCircle(_x, _y, controls_dims / num_controls_root/2, controls_dims / num_controls_root/2);
-
-            // draw current position
-            float diff = abs(controls[i] - target_controls[i]);
-            ofSetColor(0);
-            ofDrawBitmapString(controls[i],_x,_y);
-            ofSetColor(255,0,0);
-            ofDrawBitmapString(diff,_x,_y+ 12);
-
-            i++;
-        }
+        vec_displays[i].draw();
     }
 }
 
