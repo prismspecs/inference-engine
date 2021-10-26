@@ -13,7 +13,8 @@ public:
     // playing
     ofSoundPlayer game_music;
     ofSoundPlayer engine;
-    vector<ofSoundPlayer> proximity;
+    // vector<ofSoundPlayer> proximity;
+    ofSoundPlayer proximity;
     vector<ofSoundPlayer> vec_change;
 
     // endgame
@@ -25,6 +26,9 @@ public:
 
     float pan = 0.0;
     float pan_speed = .0001;
+
+    int proximity_level = 0;
+    int prev_proximity_level = 0;
 
     // music
     bool game_music_fading_in = false;
@@ -46,6 +50,7 @@ public:
     void menu_end();
     void play_once(string which_sound);
     void play_engine(int active_vec, vector<float> &controls);
+    void set_proximity(float dist, float max_dist);
 
     void change_active_vec(int &v);
 };

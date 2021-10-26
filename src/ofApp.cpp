@@ -94,6 +94,7 @@ void ofApp::update()
     }
     else
     {
+        cout << "serial received " << myByte << endl;
         controller.receive_serial(myByte);
     }
 
@@ -137,6 +138,9 @@ void ofApp::update()
 
         // update distance
         distance = find_distance(target_position, current_position);
+
+        // send distance to sound engine
+        sound.set_proximity(distance, max_dist);
 
         // VICTORY CONDITION
         if (distance < 1)
@@ -349,7 +353,7 @@ void ofApp::draw()
             gui.draw();
         }
 
-        // debug controller
+        //
         controller.draw();
 
         if (game_startfade)
@@ -391,6 +395,32 @@ void ofApp::draw()
         draw_centered_text("YOU WIN!", ofColor(255, 255, 0, op), 0);
         break;
     }
+
+    case HELP_SCREEN:
+    {
+
+        // controls
+        ofDrawBitmapString("Here are your ship's controls. \nYou must ...:", 20, 162 - 33);
+        ofSetColor(255, 255, 0);
+        ofRect(20, 162, 408, 700);
+
+        // main surface
+        ofDrawBitmapString("This shows where you are in hyperdimensional space ...", 448, 28);
+        ofSetColor(0, 255, 255);
+        ofRect(448, 28, 1024, 1024);
+
+        // top right thing
+        ofDrawBitmapString("This is where I, the ship's computer, will \ngive you valuable advice on your journey", 1492, 88);
+        ofSetColor(255, 0, 255);
+        ofRect(1492, 88, 408, 408);
+
+        // target img
+        ofDrawBitmapString("This is the place to which you must navigate", 1492, 584 - 33);
+        ofSetColor(22, 255, 66);
+        ofRect(1492, 584, 408, 408);
+
+        break;
+    }
     }
 
     // show fps
@@ -408,19 +438,24 @@ void ofApp::draw()
 void ofApp::draw_distance_indicator(float &distance)
 {
     // plain text distance number
-    ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
-    ofSetColor(0);
+    //ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
+
+    ofRectangle r(1492, 88, 408, 408);
+    ofSetColor(80);
     ofDrawRectangle(r);
+
+    // distance as text
     string diststr = ofToString(distance);
     ofSetColor(255);
     ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
 
     // background for meter
-    ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
-    float max_dist = sqrt(4 * 512);
+    //ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
+    ofRectangle distance_bg(r.x + 10, r.y - 20, r.width - 20, 20);
+
     float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
 
-    ofRectangle distance_meter(10, ofGetHeight() - 40, mapped_dist, 20);
+    ofRectangle distance_meter(distance_bg.x, distance_bg.y, mapped_dist, distance_bg.height);
     ofSetColor(0);
     ofDrawRectangle(distance_bg);
     ofSetColor(255);
@@ -569,6 +604,16 @@ void ofApp::receive_button(string &button)
                 menu_fadestartedtime = ofGetElapsedTimeMillis();
                 menu_startfade = true;
             }
+
+            if (menu_selection == 1)
+            {
+                GAME_STATE = HELP_SCREEN;
+            }
+        }
+        else if (GAME_STATE == HELP_SCREEN)
+        {
+            sound.play_once("menu_select");
+            GAME_STATE = MENU;
         }
     }
 }

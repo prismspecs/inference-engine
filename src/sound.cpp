@@ -5,16 +5,19 @@ Sound::Sound()
 }
 
 void Sound::setup()
-{    
+{
     menu_music.load("sounds/menu_music.wav");
     menu_music.setLoop(true);
     menu_change.load("sounds/vector_change/vector_change_2.wav");
-    menu_select.load("sounds/hot_sounds/hot01.wav");
+    menu_select.load("sounds/hot_sounds/hot0.wav");
 
     engine.setLoop(true);
     engine.setMultiPlay(true);
     game_music.load("sounds/background_music.wav");
     game_music.setLoop(true);
+
+    proximity.setLoop(true);
+    proximity.play();
 
     // this probably shouldn't be hard coded...
     cout << "loading in sounds ...";
@@ -162,7 +165,46 @@ void Sound::play_engine(int active_vec, vector<float> &controls)
     // engine.load("sounds/beam1.wav");
     // engine.play();
 }
+void Sound::set_proximity(float dist, float max_dist)
+{
+    float normalized = 1 - (dist / max_dist);
 
+    if (normalized <= .6)
+    {
+        proximity_level = 0;
+    }
+    if (normalized > .6 && normalized <= .7)
+    {
+        proximity_level = 1;
+    }
+    if (normalized > .7 && normalized <= .8)
+    {
+        proximity_level = 2;
+    }
+    if (normalized > .8 && normalized <= .9)
+    {
+        proximity_level = 3;
+    }
+    if (normalized > .9)
+    {
+        proximity_level = 4;
+    }
+
+    //cout << "new distance " << normalized << endl;
+    
+    if(proximity_level != prev_proximity_level)
+    {
+        proximity.load("sounds/hot_sounds/hot" + ofToString(proximity_level) + ".wav");
+        proximity.setLoop(true);
+        proximity.setVolume(.3);
+        proximity.play();
+        cout << "new proximity level " << proximity_level << endl;
+
+        // should reset this ^ at beginning of every match ?
+        prev_proximity_level = proximity_level;
+        
+    }
+}
 void Sound::draw()
 {
 }

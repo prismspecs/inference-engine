@@ -69,11 +69,20 @@ void Controller::receive_serial(int &inByte)
     {
         controls[active_vec] -= vector_speed;
         ofNotifyEvent(sendControlVectors, controls);
+        string button = "up";
+        ofNotifyEvent(buttonPress, button);
     }
     if (inByte == 1)
     {
         controls[active_vec] += vector_speed;
         ofNotifyEvent(sendControlVectors, controls);
+        string button = "down";
+        ofNotifyEvent(buttonPress, button);
+    }
+    if (inByte == 2)
+    {
+        string button = "fire";
+        ofNotifyEvent(buttonPress, button);
     }
 }
 void Controller::update()

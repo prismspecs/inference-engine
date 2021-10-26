@@ -112,6 +112,7 @@ public:
 #define MENU 0
 #define PLAYING 1
 #define END 2
+#define HELP_SCREEN 3
 	int GAME_STATE = 0;
 
 	// ship vars
@@ -139,6 +140,7 @@ public:
 	float targetimg_dim = tiD_min;
 
 	float distance = 0.0; // how far from destination
+	float max_dist = sqrt(4 * 512);
 
 	// MIDI
 	void newMidiMessage(ofxMidiMessage &eventArgs);
