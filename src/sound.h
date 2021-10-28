@@ -12,7 +12,7 @@ public:
 
     // playing
     ofSoundPlayer game_music;
-    ofSoundPlayer engine;
+    vector<ofSoundPlayer> engine;
     // vector<ofSoundPlayer> proximity;
     ofSoundPlayer proximity;
     vector<ofSoundPlayer> vec_change;

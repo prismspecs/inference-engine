@@ -121,6 +121,8 @@ void ofApp::update()
                 // end menu music loop, begin game music loop
                 sound.menu_end();
                 sound.game_start();
+
+                last_time_controls_changed = ofGetElapsedTimeMillis();
             }
         }
         break;
@@ -142,8 +144,18 @@ void ofApp::update()
         // send distance to sound engine
         sound.set_proximity(distance, max_dist);
 
+        // if game times out
+        if(ofGetElapsedTimeMillis() > last_time_controls_changed + controls_idle_timeout)
+        {
+            // end game music loop
+            sound.game_end();
+            sound.menu_start();
+            GAME_STATE = MENU;
+            end_startfade = false;
+        }
+
         // VICTORY CONDITION
-        if (distance < 1)
+        if (distance < min_distance)
         {
             GAME_STATE = END;
             end_startfade = true;
@@ -203,21 +215,21 @@ void ofApp::update()
                 warp_effect(currentImg.getTexture(), origin);
             }
 
+            last_time_controls_changed = ofGetElapsedTimeMillis();
+
             controls_changed = false;
         }
 
         // update effects
-        // for (int i = warps.size() - 1; i >= 0; i--)
-        // {
-        //     warps[i].update();
+        for (int i = warps.size() - 1; i >= 0; i--)
+        {
+            warps[i].update();
 
-        //     if (warps[i].alpha <= 0)
-        //     {
-        //         warps.erase(warps.begin() + i);
-        //     }
-        // }
-
-        // HUD
+            if (warps[i].alpha <= 0)
+            {
+                warps.erase(warps.begin() + i);
+            }
+        }
 
         break;
     }
@@ -257,34 +269,21 @@ void ofApp::draw()
         if (menu_selection == 0)
         {
             ofSetColor(255, 255, 50, op);
-            font_menu.drawString("start game", 100, ofGetHeight() / 2);
+
+            font_menu.drawString("start game", ofGetWidth() / 2 - 285 / 2, ofGetHeight() / 2);
 
             ofSetColor(50, 50, 50, op);
-            font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
+            font_menu.drawString("how to play", ofGetWidth() / 2 - 299 / 2, ofGetHeight() / 2 + 80);
         }
 
         if (menu_selection == 1)
         {
             ofSetColor(50, 50, 50, op);
-            font_menu.drawString("start game", 100, ofGetHeight() / 2);
+            font_menu.drawString("start game", ofGetWidth() / 2 - 285 / 2, ofGetHeight() / 2);
 
             ofSetColor(255, 255, 50, op);
-            font_menu.drawString("how to play", 100, ofGetHeight() / 2 + 80);
+            font_menu.drawString("how to play", ofGetWidth() / 2 - 299 / 2, ofGetHeight() / 2 + 80);
         }
-
-        // // testing
-        // // controls
-        // ofSetColor(255, 255, 0);
-        // ofRect(20, 162, 408, 700);
-        // // main surface
-        // ofSetColor(0, 255, 255);
-        // ofRect(448, 28, 1024, 1024);
-        // // top right thing
-        // ofSetColor(255, 0, 255);
-        // ofRect(1492, 88, 408, 408);
-        // // target img
-        // ofSetColor(22, 255, 66);
-        // ofRect(1492, 584, 408, 408);
 
         break;
     }
@@ -292,24 +291,35 @@ void ofApp::draw()
     {
         ofClear(0);
 
-        ofEnableAlphaBlending();
-        surface_main.draw();
-        ofDisableAlphaBlending();
-
         // ofMesh mesh = make_mesh(currentImg);
         // ofPushMatrix();
         // ofTranslate(448,28);
         // mesh.draw();
         // ofPopMatrix();
 
-        // ofEnableAlphaBlending();
-        // // show zooming images
-        // for (int i = warps.size() - 1; i >= 0; i--)
-        // {
-        //     // cout << "drawing warp" << endl;
-        //     warps[i].draw();
-        // }
-        // ofDisableAlphaBlending();
+        draw_distance_indicator(distance);
+
+        if (USE_GUI)
+        {
+            gui.draw();
+        }
+
+        //
+        controller.draw();
+
+        // draw main game surface
+        ofEnableAlphaBlending();
+        surface_main.draw();
+        ofDisableAlphaBlending();
+
+        // show zooming images
+        ofEnableAlphaBlending();
+        for (int i = warps.size() - 1; i >= 0; i--)
+        {
+            // cout << "drawing warp" << endl;
+            warps[i].draw();
+        }
+        ofDisableAlphaBlending();
 
         // draw target location image
         if (targetImg.isAllocated())
@@ -318,6 +328,7 @@ void ofApp::draw()
 
             // draw to fbo instead and integrate into HUD
             targetFbo.begin();
+            ofSetColor(255);
             targetImg.draw(0, 0);
             targetFbo.end();
 
@@ -327,7 +338,7 @@ void ofApp::draw()
                 targetimg_x = ofLerp(targetimg_x, tiX_max, .05);
                 targetimg_y = ofLerp(targetimg_y, tiY_max, .05);
                 targetimg_dim = ofLerp(targetimg_dim, tiD_max, .05);
-
+                ofSetColor(255);
                 targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
 
                 float op = targetimg_dim / tiD_max * 255;
@@ -339,22 +350,12 @@ void ofApp::draw()
                 targetimg_x = ofLerp(targetimg_x, tiX_min, .05);
                 targetimg_y = ofLerp(targetimg_y, tiY_min, .05);
                 targetimg_dim = ofLerp(targetimg_dim, tiD_min, .05);
-
+                ofSetColor(255);
                 targetFbo.draw(targetimg_x, targetimg_y, targetimg_dim, targetimg_dim);
 
                 ofDrawBitmapString("TARGET DESINATION:", targetimg_x, targetimg_y - 10);
             }
         }
-
-        draw_distance_indicator(distance);
-
-        if (USE_GUI)
-        {
-            gui.draw();
-        }
-
-        //
-        controller.draw();
 
         if (game_startfade)
         {
@@ -437,36 +438,61 @@ void ofApp::draw()
 //--------------------------------------------------------------
 void ofApp::draw_distance_indicator(float &distance)
 {
+    // was 1492, 88, 408, 408
+    ofRectangle r(1492, 348, 408, 408);
+
+    // do this instead with text for style?
+    ofDrawBitmapString("PROGRESS TO TARGET:", 1492, r.y - 20);
+    string background_distance = "|||||||||||||||||||||||||||||||||||||||||||||||||||";
+    ofSetColor(88, 88, 0);
+    ofDrawBitmapString(background_distance, 1492, r.y);
+
+    string distance_string = "";
+
+    // not sure if it makes sense to measure from the starting distance or
+    // the farthest possible distance so why not compromise
+    // float avg_max_dst = (starting_distance + max_dist) / 2;
+
+    int mapped_d = ofMap(distance, min_distance, starting_distance, background_distance.length(), 0);
+    mapped_d = ofClamp(mapped_d, 0, background_distance.length());
+
+    for (int i = 0; i < mapped_d; i++)
+    {
+        distance_string += "|";
+    }
+
+    ofSetColor(255, 255, 0);
+    ofDrawBitmapString(distance_string, 1492, r.y);
+
     // plain text distance number
     //ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
 
-    ofRectangle r(1492, 88, 408, 408);
-    ofSetColor(80);
-    ofDrawRectangle(r);
+    // ofSetColor(80);
+    // ofDrawRectangle(r);
 
     // distance as text
-    string diststr = ofToString(distance);
-    ofSetColor(255);
-    ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
+    // string diststr = ofToString(distance);
+    // ofSetColor(255);
+    // ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
 
     // background for meter
     //ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
-    ofRectangle distance_bg(r.x + 10, r.y - 20, r.width - 20, 20);
+    // ofRectangle distance_bg(r.x + 10, r.y - 20, r.width - 20, 20);
 
-    float mapped_dist = ofMap(distance, max_dist, 0, 0, distance_bg.width);
+    // float mapped_dist = ofMap(distance, max_dist, 0, distance_bg.x, distance_bg.x + distance_bg.width);
 
-    ofRectangle distance_meter(distance_bg.x, distance_bg.y, mapped_dist, distance_bg.height);
-    ofSetColor(0);
-    ofDrawRectangle(distance_bg);
-    ofSetColor(255);
+    // ofRectangle distance_meter(distance_bg.x, distance_bg.y, mapped_dist, distance_bg.height);
+    // ofSetColor(0);
+    //ofDrawRectangle(distance_bg);
+    // ofSetColor(255);
     // ofDrawRectangle(distance_meter);
 
-    ofVec3f arrowTailPoint(10, ofGetHeight() - 40, 0);
-    ofVec3f arrowHeadPoint(mapped_dist, ofGetHeight() - 40, 0);
-    ofDrawArrow(arrowTailPoint, arrowHeadPoint, 4.0);
+    // ofVec3f arrowTailPoint(r.x + 10, r.y - 40, 0);
+    // ofVec3f arrowHeadPoint(mapped_dist, r.y - 40, 0);
+    // ofDrawArrow(arrowTailPoint, arrowHeadPoint, 4.0);
 
-    ofSetColor(255);
-    ofDrawBitmapString(ofToString(controller.active_vec), 20, ofGetHeight() - 20);
+    // ofSetColor(255);
+    // ofDrawBitmapString(ofToString(controller.active_vec), r.x + 20, r.y - 20);
 }
 //--------------------------------------------------------------
 void ofApp::newPosition()
@@ -481,6 +507,8 @@ void ofApp::newPosition()
     target_position = generate_random_grouped_z();
     controller.reset(starting_position, target_position, shuffled_vecs); // make sure controller starts at correct pos
     current_position = starting_position;
+
+    starting_distance = find_distance(target_position, current_position);
 
     // starting_position.clear();
     // for (int i = 0; i < 512; i++)
@@ -548,7 +576,7 @@ void ofApp::newPosition()
 
     // now that controllable vectors have been isolated for new round, update the
     // current position so that it takes these into effect
-    update_position();
+    // update_position();
 
     // starting_position should take into account the current controller values
     // starting_position = current_position;
@@ -565,8 +593,8 @@ void ofApp::newPosition()
     lerp_amount = 0;
 
     // delete all warp meshes
-    warps.clear();
-    warp_effect(currentImg.getTexture(), origin);
+    // warps.clear();
+    // warp_effect(currentImg.getTexture(), origin);
 }
 //--------------------------------------------------------------
 void ofApp::receive_button(string &button)
@@ -643,7 +671,7 @@ void ofApp::receive_control_vectors(vector<float> &controls)
         controls_changed = true;
 
         // make some noise
-        sound.play_engine(active_vec, controls);
+        sound.play_engine(controller.active_vec, controls);
 
         break;
     }
@@ -652,19 +680,10 @@ void ofApp::receive_control_vectors(vector<float> &controls)
 void ofApp::change_active_vec(int &vec)
 {
     sound.change_active_vec(vec);
-
-    //cout << "" << vec << endl;
 }
 //--------------------------------------------------------------
 void ofApp::update_position()
 {
-
-    for (int i = 0; i < num_isolated; i++)
-    {
-        // if using GUI sliders...
-        // change the associated isolated vector
-        // current_position[isolate_vectors[i]] = vecs.at(i);
-    }
 }
 
 //--------------------------------------------------------------
@@ -743,7 +762,7 @@ void ofApp::lerp_ship()
 void ofApp::control_changed(ofAbstractParameter &e)
 {
 
-    update_position();
+    // update_position();
     controls_changed = true;
 }
 //--------------------------------------------------------------
@@ -751,10 +770,11 @@ void ofApp::warp_effect(ofTexture &texture, ofVec3f location)
 {
     // image warp
     ImageWarp iw = ImageWarp(texture, location);
+    iw.fly = true;
     warps.push_back(iw);
 
     // find the oldest warp that isn't yet flying
-    warps[warps.size() - 2].fly = true;
+    //warps[warps.size() - 2].fly = true;
 }
 //--------------------------------------------------------------
 vector<float> ofApp::generate_random_z()
@@ -970,3 +990,17 @@ void ofApp::draw_centered_text(string str, ofColor color, float offset)
 //         update_position();
 //     }
 // }
+
+// // testing
+// // controls
+// ofSetColor(255, 255, 0);
+// ofRect(20, 162, 408, 700);
+// // main surface
+// ofSetColor(0, 255, 255);
+// ofRect(448, 28, 1024, 1024);
+// // top right thing
+// ofSetColor(255, 0, 255);
+// ofRect(1492, 88, 408, 408);
+// // target img
+// ofSetColor(22, 255, 66);
+// ofRect(1492, 584, 408, 408);

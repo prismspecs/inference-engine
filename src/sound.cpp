@@ -11,8 +11,6 @@ void Sound::setup()
     menu_change.load("sounds/vector_change/vector_change_2.wav");
     menu_select.load("sounds/hot_sounds/hot0.wav");
 
-    engine.setLoop(true);
-    engine.setMultiPlay(true);
     game_music.load("sounds/background_music.wav");
     game_music.setLoop(true);
 
@@ -20,25 +18,33 @@ void Sound::setup()
     proximity.play();
 
     // this probably shouldn't be hard coded...
-    cout << "loading in sounds ...";
+    // load in vector change sounds
     for (int i = 0; i < 16; i++)
     {
         ofSoundPlayer osp;
         string fn = "data/sounds/vector_change/vector_change_" + ofToString(i) + ".wav";
         osp.load(fn);
         vec_change.push_back(osp);
-        cout << fn;
     }
-    cout << endl;
+
+    // load in engine sounds
+    for (int i = 0; i < 64; i++)
+    {
+        ofSoundPlayer osp;
+        string fn = "data/sounds/engine/engine_" + ofToString(i) + ".wav";
+        osp.load(fn);
+        osp.setVolume(.3);
+        osp.setMultiPlay(true);
+        engine.push_back(osp);
+    }
 
     victory.load("sounds/victory_sound.wav");
 }
 
 void Sound::update()
 {
-    pan += pan_speed;
-
-    engine.setPan(sin(pan));
+    // pan += pan_speed;
+    //engine.setPan(sin(pan));
 
     // fade in game music
     if (game_music_fading_in)
@@ -51,6 +57,8 @@ void Sound::update()
             vol = 1.0;
             game_music_fading_in = false;
         }
+
+        
     }
 
     // fade out game music
@@ -64,6 +72,9 @@ void Sound::update()
             vol = 0.0;
             game_music_fading_out = false;
         }
+
+        // kill proximity alarms
+        proximity.stop();
     }
 
     // fade in menu music
@@ -77,6 +88,8 @@ void Sound::update()
             vol = 1.0;
             menu_music_fading_in = false;
         }
+
+        
     }
 
     // fade out menu music
@@ -164,7 +177,13 @@ void Sound::play_engine(int active_vec, vector<float> &controls)
 {
     // engine.load("sounds/beam1.wav");
     // engine.play();
+
+    float e = controls[active_vec];
+    float m = ofMap(e,-1,1,0,engine.size()-1);
+    engine[m].play();
+
 }
+
 void Sound::set_proximity(float dist, float max_dist)
 {
     float normalized = 1 - (dist / max_dist);
