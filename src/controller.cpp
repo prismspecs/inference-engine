@@ -84,16 +84,39 @@ void Controller::receive_serial(int &inByte)
         string button = "fire";
         ofNotifyEvent(buttonPress, button);
     }
+
+    if (inByte == 3)
+    {
+        string button = "left";
+        ofNotifyEvent(buttonPress, button);
+        active_vec--;
+        if (active_vec < 0)
+            active_vec = num_control_vecs - 1;
+
+        ofNotifyEvent(activeVecChanged, active_vec);
+    }
+
+    if (inByte == 4)
+    {
+        string button = "right";
+        ofNotifyEvent(buttonPress, button);
+        active_vec++;
+        if (active_vec >= num_control_vecs)
+            active_vec = 0;
+
+        ofNotifyEvent(activeVecChanged, active_vec);
+    }
 }
 void Controller::update()
 {
 
     for (int i = 0; i < controls.size(); i++)
     {
-        // draw current position
+        // update each vec display's "distance to target" value
         float diff = abs(controls[i] - target_controls[i]);
         vec_displays[i].diff = diff;
 
+        // keep track of which is active so it can be highlighted or whatever
         if (i == active_vec)
         {
             vec_displays[i].active = true;
@@ -130,7 +153,6 @@ void Controller::keyReleased(ofKeyEventArgs &e)
             active_vec = num_control_vecs - 1;
 
         ofNotifyEvent(activeVecChanged, active_vec);
-
     }
 
     if (e.key == OF_KEY_RIGHT)
@@ -169,12 +191,14 @@ void Controller::keyPressed(ofKeyEventArgs &e)
     if (e.key == OF_KEY_UP)
     {
         controls[active_vec] += vector_speed;
+        controls[active_vec] = ofClamp(controls[active_vec],-1,1);
         ofNotifyEvent(sendControlVectors, controls);
     }
 
     if (e.key == OF_KEY_DOWN)
     {
         controls[active_vec] -= vector_speed;
+        controls[active_vec] = ofClamp(controls[active_vec],-1,1);
         ofNotifyEvent(sendControlVectors, controls);
     }
 }
@@ -182,48 +206,8 @@ void Controller::keyPressed(ofKeyEventArgs &e)
 void Controller::draw()
 {
 
-    // int i = 0;
-    // for (int y = 0; y < num_controls_root; y++)
-    // {
-    //     for (int x = 0; x < num_controls_root; x++)
-    //     {
-    //         float _x = controls_start_x + (x * control_dim_x) + control_dim_x / 2;
-    //         float _y = controls_start_y + (y * control_dim_y) + control_dim_y / 2;
-
-    //         ofSetColor(255, 255, 0);
-    //         ofCircle(_x , _y , control_dim_x *.4);
-    //         // ofRect(_x, _y, control_dim_x, control_dim_y);
-
-    //         // draw current position
-    //         float diff = abs(controls[i] - target_controls[i]);
-    //         ofSetColor(0);
-    //         ofDrawBitmapString(controls[i], _x, _y);
-    //         ofSetColor(255, 0, 0);
-    //         ofDrawBitmapString(ofToString(diff,2), _x, _y + 12);
-
-    //         i++;
-    //     }
-    // }
-    ofSetCircleResolution(12);
-    ofNoFill();
-
     for (int i = 0; i < vec_displays.size(); i++)
     {
         vec_displays[i].draw();
     }
-}
-
-double Controller::getAngleRads(ofVec2f a, ofVec2f b)
-{
-    float delta_x = (a.x + b.x) - (a.x);
-    float delta_y = (a.y + b.y) - (a.y);
-    float theta_radians = atan2(delta_y, delta_x) + PI / 2;
-
-    // we need to map to coord system when 0 degree is at 3 O'clock, 270 at 12 O'clock
-    if (theta_radians < 0)
-        theta_radians = abs(theta_radians);
-    else
-        theta_radians = 2 * PI - theta_radians;
-
-    return theta_radians;
 }

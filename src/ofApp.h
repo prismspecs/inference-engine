@@ -80,12 +80,14 @@ public:
 	// PLAYING state stuff
 	bool controls_changed = true;
 	long last_warp;
-	int warp_freq = 200; // how often we should request new image, was 200
+	int warp_freq = 40; // how often we should request new image, was 200
 	float lerp_amount = 0;
 	float lerp_speed = .003;
 	bool game_startfade = false;
 	int game_fadetime = 1500;
 	long game_fadestartedtime = 0;
+	long last_time_controls_changed = 0;
+	int controls_idle_timeout = 60000;	// how long until game resets
 
 	// end game stuff
 	bool end_startfade = false;
@@ -140,7 +142,9 @@ public:
 	float targetimg_dim = tiD_min;
 
 	float distance = 0.0; // how far from destination
+	float starting_distance = 0.0;
 	float max_dist = sqrt(4 * 512);
+	float min_distance = 1.5;	// minimum distance required to win
 
 	// MIDI
 	void newMidiMessage(ofxMidiMessage &eventArgs);

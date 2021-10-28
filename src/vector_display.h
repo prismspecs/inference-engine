@@ -25,9 +25,9 @@ public:
     int wave_resolution = 40;
     float phase;
     float phase_speed = .03;
-    float max_phase_speed = .10;
+    float max_phase_speed = .08;
     float phase_amplitude = 1;
-    float max_phase_amplitude = 13;
+    float max_phase_amplitude = 20;
 
 };
 #endif

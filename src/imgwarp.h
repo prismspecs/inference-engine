@@ -17,10 +17,10 @@ public:
     bool fly = false;
     ofTexture tex;
     ofMesh mesh;
-    float speed = 10; // was 15
+    float speed = 8; // was 10
 
-    float alpha = 255;
-    float alphaDrain = 4;   // was 4
+    float alpha = 100;  // was 255
+    float alphaDrain = 6;   // was 4
     float scale = 512;
 };
 #endif
