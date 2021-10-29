@@ -68,6 +68,7 @@ void Controller::receive_serial(int &inByte)
     if (inByte == 0)
     {
         controls[active_vec] -= vector_speed;
+        controls[active_vec] = ofClamp(controls[active_vec],-1,1);
         ofNotifyEvent(sendControlVectors, controls);
         string button = "up";
         ofNotifyEvent(buttonPress, button);
@@ -75,6 +76,7 @@ void Controller::receive_serial(int &inByte)
     if (inByte == 1)
     {
         controls[active_vec] += vector_speed;
+        controls[active_vec] = ofClamp(controls[active_vec],-1,1);
         ofNotifyEvent(sendControlVectors, controls);
         string button = "down";
         ofNotifyEvent(buttonPress, button);
