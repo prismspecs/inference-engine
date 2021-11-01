@@ -7,3 +7,4 @@ ofxRunway
 ofxGui
 ofxMidi
 ofxGLFWJoystick
+ofxSerial

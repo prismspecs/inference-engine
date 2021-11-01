@@ -17,6 +17,33 @@ void ofApp::setup()
     serial.listDevices();
     vector<ofSerialDeviceInfo> deviceList = serial.getDeviceList();
     serial.setup(0, 115200);
+    // std::vector<ofx::IO::SerialDeviceInfo> devicesInfo = ofx::IO::SerialDeviceUtils::listDevices();
+
+    // ofLogNotice("ofApp::setup") << "Connected Devices: ";
+
+    // for (std::size_t i = 0; i < devicesInfo.size(); ++i)
+    // {
+    //     ofLogNotice("ofApp::setup") << "\t" << devicesInfo[i];
+    // }
+
+    // if (!devicesInfo.empty())
+    // {
+    //     // Connect to the first matching device.
+    //     bool success = serial.setup(devicesInfo[0], 115200);
+
+    //     if (success)
+    //     {
+    //         ofLogNotice("ofApp::setup") << "Successfully setup " << devicesInfo[0];
+    //     }
+    //     else
+    //     {
+    //         ofLogNotice("ofApp::setup") << "Unable to setup " << devicesInfo[0];
+    //     }
+    // }
+    // else
+    // {
+    //     ofLogNotice("ofApp::setup") << "No devices connected.";
+    // }
 
     // set up effects
     // origin = ofVec3f(512, 512, -100);
@@ -77,6 +104,7 @@ void ofApp::update()
         // cout << "serial received " << myByte << endl;
         controller.receive_serial(myByte);
     }
+
 
     // update controller
     controller.update();

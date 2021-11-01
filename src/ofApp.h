@@ -7,6 +7,7 @@
 #include "surface.h"
 #include "controller.h"
 #include "sound.h"
+#include "ofxSerial.h"
 
 // make sure you make your ofApp or class to inherit from ofxRunwayListener
 class ofApp : public ofBaseApp, public ofxRunwayListener
@@ -59,6 +60,7 @@ public:
 
 	// serial
 	ofSerial serial;
+	// ofx::IO::SerialDevice serial;
 
 	// gui
 	bool USE_GUI = false;
@@ -84,7 +86,7 @@ public:
 	int game_fadetime = 1500;
 	long game_fadestartedtime = 0;
 	long last_time_controls_changed = 0;
-	int controls_idle_timeout = 60000;	// how long until game resets
+	int controls_idle_timeout = 60000; // how long until game resets
 
 	// tutorial stuff
 	ofVideoPlayer tutorial_vid;
@@ -128,7 +130,7 @@ public:
 	// HUD variables
 	// fixed target image location and size for minimized target image
 	float tiX_min = 1492;
-	float tiY_min = 390;	// was 584
+	float tiY_min = 390; // was 584
 	float tiD_min = 408;
 	// fixed for maximized
 	float tiX_max = 448;
@@ -144,7 +146,7 @@ public:
 	float distance = 0.0; // how far from destination
 	float starting_distance = 0.0;
 	float max_dist = sqrt(4 * 512);
-	float min_distance = 1.9;	// minimum distance required to win
+	float min_distance = 2.2; // minimum distance required to win
 
 	// sound
 	Sound sound;
