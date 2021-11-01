@@ -207,6 +207,8 @@ void Controller::keyPressed(ofKeyEventArgs &e)
 
 void Controller::draw()
 {
+    ofSetColor(255);
+    ofDrawBitmapString("SHIP CONTROLS:", controls_start_x + 10, controls_start_y - 2);
 
     for (int i = 0; i < vec_displays.size(); i++)
     {

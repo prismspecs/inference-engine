@@ -4,6 +4,7 @@
 
 void ofApp::setup()
 {
+
     // GRAPHICS SETUP
     // ofSetWindowShape(img_dims, img_dims);
     ofSetBackgroundAuto(false);
@@ -39,30 +40,9 @@ void ofApp::setup()
     runway.setup(this, "http://localhost:8000");
     runway.start();
 
-    // setup gui
-    if (USE_GUI)
-    {
-        sliderGroup.setName("sliders");
-        for (size_t i{0}; i < num_isolated; ++i)
-        {
-            ofParameter<float> p;
-            std::string name = "vec ";
-
-            name += to_string(i);
-
-            // make sure to randomize vecs because if they are set to 0 it gets funky
-            float rand = ofRandom(-min_max_vecs, min_max_vecs);
-
-            p.set(name, rand, -min_max_vecs, min_max_vecs);
-            // p.addListener(this, &ofApp::control_changed);
-
-            vecs.push_back(p);
-            sliderGroup.add(vecs.at(i));
-        }
-        // add listener for the controls so we only update when necessary
-        ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
-        gui.setup(sliderGroup);
-    }
+    // setup tutorial
+    tutorial_vid.load("videos/tutorial_nosound.mp4");
+    tutorial_vid.setLoopState(OF_LOOP_NONE);
 
     // set up game
     // map out the controls
@@ -94,7 +74,7 @@ void ofApp::update()
     }
     else
     {
-        cout << "serial received " << myByte << endl;
+        // cout << "serial received " << myByte << endl;
         controller.receive_serial(myByte);
     }
 
@@ -145,7 +125,7 @@ void ofApp::update()
         sound.set_proximity(distance, max_dist);
 
         // if game times out
-        if(ofGetElapsedTimeMillis() > last_time_controls_changed + controls_idle_timeout)
+        if (ofGetElapsedTimeMillis() > last_time_controls_changed + controls_idle_timeout)
         {
             // end game music loop
             sound.game_end();
@@ -244,6 +224,18 @@ void ofApp::update()
         }
         break;
     }
+
+    case HELP_SCREEN:
+    {
+
+        // play tutorial vid
+        tutorial_vid.update();
+
+        if (tutorial_vid.getPosition() >= 0.98)
+        {
+            GAME_STATE = PLAYING;
+        }
+    }
     }
 }
 //--------------------------------------------------------------
@@ -298,11 +290,6 @@ void ofApp::draw()
         // ofPopMatrix();
 
         draw_distance_indicator(distance);
-
-        if (USE_GUI)
-        {
-            gui.draw();
-        }
 
         //
         controller.draw();
@@ -400,34 +387,38 @@ void ofApp::draw()
     case HELP_SCREEN:
     {
 
+        // play tutorial vid
+        ofSetColor(255, 255);
+        tutorial_vid.draw(0, 0);
+
         // controls
-        ofDrawBitmapString("Here are your ship's controls. \nYou must ...:", 20, 162 - 33);
-        ofSetColor(255, 255, 0);
-        ofRect(20, 162, 408, 700);
+        // ofDrawBitmapString("Here are your ship's controls. \nYou must ...:", 20, 348);
+        // ofSetColor(255, 255, 0);
+        // ofRect(20, 162, 408, 700);
 
-        // main surface
-        ofDrawBitmapString("This shows where you are in hyperdimensional space ...", 448, 28);
-        ofSetColor(0, 255, 255);
-        ofRect(448, 28, 1024, 1024);
+        // // main surface
+        // ofDrawBitmapString("This shows where you are in hyperdimensional space ...", 448, 28);
+        // ofSetColor(0, 255, 255);
+        // ofRect(448, 28, 1024, 1024);
 
-        // top right thing
-        ofDrawBitmapString("This is where I, the ship's computer, will \ngive you valuable advice on your journey", 1492, 88);
-        ofSetColor(255, 0, 255);
-        ofRect(1492, 88, 408, 408);
+        // // top right thing
+        // ofDrawBitmapString("This is where I, the ship's computer, will \ngive you valuable advice on your journey", 1492, 88);
+        // ofSetColor(255, 0, 255);
+        // ofRect(1492, 88, 408, 408);
 
-        // target img
-        ofDrawBitmapString("This is the place to which you must navigate", 1492, 584 - 33);
-        ofSetColor(22, 255, 66);
-        ofRect(1492, 584, 408, 408);
+        // // target img
+        // ofDrawBitmapString("This is the place to which you must navigate", 1492, 584 - 33);
+        // ofSetColor(22, 255, 66);
+        // ofRect(1492, 584, 408, 408);
 
         break;
     }
     }
 
     // show fps
-    string str = ofToString(ofGetFrameRate());
-    ofSetColor(255);
-    ofDrawBitmapString(str, 10, 10);
+    // string str = ofToString(ofGetFrameRate());
+    // ofSetColor(255);
+    // ofDrawBitmapString(str, 10, 10);
 
     // save frames for video
     if (save_frames)
@@ -439,7 +430,7 @@ void ofApp::draw()
 void ofApp::draw_distance_indicator(float &distance)
 {
     // was 1492, 88, 408, 408
-    ofRectangle r(1492, 348, 408, 408);
+    ofRectangle r(1492, 310, 408, 408);
 
     // do this instead with text for style?
     ofDrawBitmapString("PROGRESS TO TARGET:", 1492, r.y - 20);
@@ -463,36 +454,6 @@ void ofApp::draw_distance_indicator(float &distance)
 
     ofSetColor(255, 255, 0);
     ofDrawBitmapString(distance_string, 1492, r.y);
-
-    // plain text distance number
-    //ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
-
-    // ofSetColor(80);
-    // ofDrawRectangle(r);
-
-    // distance as text
-    // string diststr = ofToString(distance);
-    // ofSetColor(255);
-    // ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
-
-    // background for meter
-    //ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
-    // ofRectangle distance_bg(r.x + 10, r.y - 20, r.width - 20, 20);
-
-    // float mapped_dist = ofMap(distance, max_dist, 0, distance_bg.x, distance_bg.x + distance_bg.width);
-
-    // ofRectangle distance_meter(distance_bg.x, distance_bg.y, mapped_dist, distance_bg.height);
-    // ofSetColor(0);
-    //ofDrawRectangle(distance_bg);
-    // ofSetColor(255);
-    // ofDrawRectangle(distance_meter);
-
-    // ofVec3f arrowTailPoint(r.x + 10, r.y - 40, 0);
-    // ofVec3f arrowHeadPoint(mapped_dist, r.y - 40, 0);
-    // ofDrawArrow(arrowTailPoint, arrowHeadPoint, 4.0);
-
-    // ofSetColor(255);
-    // ofDrawBitmapString(ofToString(controller.active_vec), r.x + 20, r.y - 20);
 }
 //--------------------------------------------------------------
 void ofApp::newPosition()
@@ -509,77 +470,6 @@ void ofApp::newPosition()
     current_position = starting_position;
 
     starting_distance = find_distance(target_position, current_position);
-
-    // starting_position.clear();
-    // for (int i = 0; i < 512; i++)
-    // {
-    //     starting_position.push_back(ofRandom(-min_max_vecs, min_max_vecs));
-    // }
-
-    // for (int i = 0; i < num_vec_groups; i++)
-    // {
-    //     for (int v = 0; v < vecs_per_group; v++)
-    //     {
-    //         // set position but based on the shuffled associated vectors
-    //         // cout << shuffled_vecs[i * v] << endl;
-    //         starting_position[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
-    //     }
-    // }
-
-    // target_position.clear();
-    // for (int i = 0; i < 512; i++)
-    // {
-    //     target_position.push_back(ofRandom(-min_max_vecs, min_max_vecs));
-    // }
-
-    // for (int i = 0; i < num_vec_groups; i++)
-    // {
-    //     for (int v = 0; v < vecs_per_group; v++)
-    //     {
-    //         // set position but based on the shuffled associated vectors
-    //         // cout << shuffled_vecs[i * v] << endl;
-    //         target_position[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
-    //     }
-    // }
-
-    // // generate a new random starting position
-    // starting_position = generate_random_z();
-    // // set current position to this new starting position
-    // current_position = starting_position;
-
-    // // decide which vectors will be in play this round at random
-    // if (RANDOMIZE_VECS)
-    // {
-    //     isolate_vectors.clear();
-    //     vector<int> hat;
-    //     for (int i = 0; i < 512; i++)
-    //     {
-    //         hat.push_back(i);
-    //     }
-
-    //     for (int i = 0; i < num_isolated; i++)
-    //     {
-    //         // select from hat
-    //         int picked = int(ofRandom(hat.size()));
-    //         isolate_vectors.push_back(hat[picked]);
-    //         hat.erase(hat.begin() + picked);
-    //     }
-    // }
-    // else
-    // {
-    //     // debug, just set vecs directly, no mixing
-    //     for (int i = 0; i < num_isolated; i++)
-    //     {
-    //         isolate_vectors.push_back(i);
-    //     }
-    // }
-
-    // now that controllable vectors have been isolated for new round, update the
-    // current position so that it takes these into effect
-    // update_position();
-
-    // starting_position should take into account the current controller values
-    // starting_position = current_position;
 
     controls_changed = true;
     generate_image(current_position, truncation, CURRENT_IMAGE);
@@ -599,25 +489,26 @@ void ofApp::newPosition()
 //--------------------------------------------------------------
 void ofApp::receive_button(string &button)
 {
-    if (button == "up")
+
+    if (GAME_STATE == MENU)
     {
-        if (GAME_STATE == MENU)
+        if (button == "up" || button == "left")
         {
             sound.play_once("menu_change");
             menu_selection--;
             if (menu_selection < 0)
                 menu_selection = menu_count;
         }
-    }
 
-    if (button == "down")
-    {
-        if (GAME_STATE == MENU)
+        if (button == "down" || button == "right")
         {
-            sound.play_once("menu_change");
-            menu_selection++;
-            if (menu_selection > menu_count)
-                menu_selection = 0;
+            if (GAME_STATE == MENU)
+            {
+                sound.play_once("menu_change");
+                menu_selection++;
+                if (menu_selection > menu_count)
+                    menu_selection = 0;
+            }
         }
     }
 
@@ -636,6 +527,10 @@ void ofApp::receive_button(string &button)
             if (menu_selection == 1)
             {
                 GAME_STATE = HELP_SCREEN;
+                tutorial_vid.setPosition(0);
+                tutorial_vid.firstFrame();
+                tutorial_vid.play();
+                
             }
         }
         else if (GAME_STATE == HELP_SCREEN)
@@ -679,13 +574,11 @@ void ofApp::receive_control_vectors(vector<float> &controls)
 //--------------------------------------------------------------
 void ofApp::change_active_vec(int &vec)
 {
-    sound.change_active_vec(vec);
+    if (GAME_STATE == PLAYING)
+    {
+        sound.change_active_vec(vec);
+    }
 }
-//--------------------------------------------------------------
-void ofApp::update_position()
-{
-}
-
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key)
 {
@@ -701,12 +594,6 @@ void ofApp::keyReleased(int key)
         {
             // reset game
             newPosition();
-        }
-
-        // playing
-        if (key == 'w')
-        {
-            warp_effect(currentImg.getTexture(), origin);
         }
 
         if (key == 't')
@@ -743,18 +630,6 @@ void ofApp::keyPressed(int key)
 //--------------------------------------------------------------
 void ofApp::lerp_ship()
 {
-    // // move all sliders to correct values slowly
-    // for (size_t i{0}; i < num_isolated; ++i)
-    // {
-    //     float lerped = ofLerp(starting_position[isolate_vectors[i]], target_position[isolate_vectors[i]], lerp_amount);
-    //     vecs.at(i).set(lerped);
-    // }
-
-    // lerp_amount += lerp_speed;
-    // lerp_amount = ofClamp(lerp_amount, 0, 1);
-
-    // generate_image(current_position, truncation, CURRENT_IMAGE);
-
     controller.lerp_ship();
     controls_changed = true;
 }
@@ -914,41 +789,16 @@ void ofApp::draw_stars(ofImage image)
         }
     }
 }
-// Runway sends information about the current model
 //--------------------------------------------------------------
 void ofApp::runwayInfoEvent(ofJson &info)
 {
     ofLogNotice("ofApp::runwayInfoEvent") << info.dump(2);
 }
-// if anything goes wrong
 //--------------------------------------------------------------
 void ofApp::runwayErrorEvent(string &message)
 {
     ofLogNotice("ofApp::runwayErrorEvent") << message;
 }
-//--------------------------------------------------------------
-void ofApp::exit()
-{
-
-    // clean up
-    midiIn.closePort();
-    midiIn.removeListener(this);
-}
-
-//--------------------------------------------------------------
-void ofApp::newMidiMessage(ofxMidiMessage &msg)
-{
-
-    // add the latest message to the message queue
-    midiMessages.push_back(msg);
-
-    // remove any old messages if we have too many
-    while (midiMessages.size() > maxMessages)
-    {
-        midiMessages.erase(midiMessages.begin());
-    }
-}
-
 //--------------------------------------------------------------
 void ofApp::draw_centered_text(string str, ofColor color, float offset)
 {
@@ -1004,3 +854,129 @@ void ofApp::draw_centered_text(string str, ofColor color, float offset)
 // // target img
 // ofSetColor(22, 255, 66);
 // ofRect(1492, 584, 408, 408);
+
+// plain text distance number
+//ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
+
+// ofSetColor(80);
+// ofDrawRectangle(r);
+
+// distance as text
+// string diststr = ofToString(distance);
+// ofSetColor(255);
+// ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
+
+// background for meter
+//ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
+// ofRectangle distance_bg(r.x + 10, r.y - 20, r.width - 20, 20);
+
+// float mapped_dist = ofMap(distance, max_dist, 0, distance_bg.x, distance_bg.x + distance_bg.width);
+
+// ofRectangle distance_meter(distance_bg.x, distance_bg.y, mapped_dist, distance_bg.height);
+// ofSetColor(0);
+//ofDrawRectangle(distance_bg);
+// ofSetColor(255);
+// ofDrawRectangle(distance_meter);
+
+// ofVec3f arrowTailPoint(r.x + 10, r.y - 40, 0);
+// ofVec3f arrowHeadPoint(mapped_dist, r.y - 40, 0);
+// ofDrawArrow(arrowTailPoint, arrowHeadPoint, 4.0);
+
+// ofSetColor(255);
+// ofDrawBitmapString(ofToString(controller.active_vec), r.x + 20, r.y - 20);
+
+// starting_position.clear();
+// for (int i = 0; i < 512; i++)
+// {
+//     starting_position.push_back(ofRandom(-min_max_vecs, min_max_vecs));
+// }
+
+// for (int i = 0; i < num_vec_groups; i++)
+// {
+//     for (int v = 0; v < vecs_per_group; v++)
+//     {
+//         // set position but based on the shuffled associated vectors
+//         // cout << shuffled_vecs[i * v] << endl;
+//         starting_position[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
+//     }
+// }
+
+// target_position.clear();
+// for (int i = 0; i < 512; i++)
+// {
+//     target_position.push_back(ofRandom(-min_max_vecs, min_max_vecs));
+// }
+
+// for (int i = 0; i < num_vec_groups; i++)
+// {
+//     for (int v = 0; v < vecs_per_group; v++)
+//     {
+//         // set position but based on the shuffled associated vectors
+//         // cout << shuffled_vecs[i * v] << endl;
+//         target_position[shuffled_vecs[i * v]] = ofRandom(-min_max_vecs, min_max_vecs);
+//     }
+// }
+
+// // generate a new random starting position
+// starting_position = generate_random_z();
+// // set current position to this new starting position
+// current_position = starting_position;
+
+// // decide which vectors will be in play this round at random
+// if (RANDOMIZE_VECS)
+// {
+//     isolate_vectors.clear();
+//     vector<int> hat;
+//     for (int i = 0; i < 512; i++)
+//     {
+//         hat.push_back(i);
+//     }
+
+//     for (int i = 0; i < num_isolated; i++)
+//     {
+//         // select from hat
+//         int picked = int(ofRandom(hat.size()));
+//         isolate_vectors.push_back(hat[picked]);
+//         hat.erase(hat.begin() + picked);
+//     }
+// }
+// else
+// {
+//     // debug, just set vecs directly, no mixing
+//     for (int i = 0; i < num_isolated; i++)
+//     {
+//         isolate_vectors.push_back(i);
+//     }
+// }
+
+// now that controllable vectors have been isolated for new round, update the
+// current position so that it takes these into effect
+// update_position();
+
+// starting_position should take into account the current controller values
+// starting_position = current_position;
+
+// // setup gui
+//     if (USE_GUI)
+//     {
+//         sliderGroup.setName("sliders");
+//         for (size_t i{0}; i < num_isolated; ++i)
+//         {
+//             ofParameter<float> p;
+//             std::string name = "vec ";
+
+//             name += to_string(i);
+
+//             // make sure to randomize vecs because if they are set to 0 it gets funky
+//             float rand = ofRandom(-min_max_vecs, min_max_vecs);
+
+//             p.set(name, rand, -min_max_vecs, min_max_vecs);
+//             // p.addListener(this, &ofApp::control_changed);
+
+//             vecs.push_back(p);
+//             sliderGroup.add(vecs.at(i));
+//         }
+//         // add listener for the controls so we only update when necessary
+//         ofAddListener(sliderGroup.parameterChangedE(), this, &ofApp::control_changed);
+//         gui.setup(sliderGroup);
+//     }

@@ -24,6 +24,8 @@ public:
     // between that and the incoming controls
     vector<float> prev_controls;
 
+    int last_engine = 0;    // so it doesnt play same engine sound twice
+
     float pan = 0.0;
     float pan_speed = .0001;
 

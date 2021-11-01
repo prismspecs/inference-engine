@@ -3,14 +3,13 @@
 #include "ofMain.h"
 #include "ofxRunway.h"
 #include "ofxGui.h"
-#include "ofxMidi.h"
 #include "imgwarp.h"
 #include "surface.h"
 #include "controller.h"
 #include "sound.h"
 
 // make sure you make your ofApp or class to inherit from ofxRunwayListener
-class ofApp : public ofBaseApp, public ofxRunwayListener, public ofxMidiListener
+class ofApp : public ofBaseApp, public ofxRunwayListener
 {
 
 public:
@@ -19,7 +18,6 @@ public:
 	void draw();
 	void draw_distance_indicator(float &distance);
 	void newPosition();
-	void exit();
 
 	void keyReleased(int key);
 	void keyPressed(int key);
@@ -50,7 +48,6 @@ public:
 	vector<float> generate_new_target(vector<float> startPos, vector<int> iso_vecs);
 	float find_distance(vector<float> a, vector<float> b);
 	void control_changed(ofAbstractParameter &e);
-	void update_position();
 	void receive_button(string &button);
 	void receive_control_vectors(vector<float> &controls);
 	void change_active_vec(int &vec);
@@ -88,6 +85,9 @@ public:
 	long game_fadestartedtime = 0;
 	long last_time_controls_changed = 0;
 	int controls_idle_timeout = 60000;	// how long until game resets
+
+	// tutorial stuff
+	ofVideoPlayer tutorial_vid;
 
 	// end game stuff
 	bool end_startfade = false;
@@ -128,7 +128,7 @@ public:
 	// HUD variables
 	// fixed target image location and size for minimized target image
 	float tiX_min = 1492;
-	float tiY_min = 584;
+	float tiY_min = 390;	// was 584
 	float tiD_min = 408;
 	// fixed for maximized
 	float tiX_max = 448;
@@ -144,13 +144,7 @@ public:
 	float distance = 0.0; // how far from destination
 	float starting_distance = 0.0;
 	float max_dist = sqrt(4 * 512);
-	float min_distance = 1.5;	// minimum distance required to win
-
-	// MIDI
-	void newMidiMessage(ofxMidiMessage &eventArgs);
-	ofxMidiIn midiIn;
-	std::vector<ofxMidiMessage> midiMessages;
-	std::size_t maxMessages = 10; // max number of messages to keep track of
+	float min_distance = 1.9;	// minimum distance required to win
 
 	// sound
 	Sound sound;

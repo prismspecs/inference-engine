@@ -57,8 +57,6 @@ void Sound::update()
             vol = 1.0;
             game_music_fading_in = false;
         }
-
-        
     }
 
     // fade out game music
@@ -88,8 +86,6 @@ void Sound::update()
             vol = 1.0;
             menu_music_fading_in = false;
         }
-
-        
     }
 
     // fade out menu music
@@ -167,7 +163,7 @@ void Sound::play_once(string which_sound)
         // convert the remaining text to an integer
         int id = atoi(which_sound.c_str());
 
-        cout << which_sound << " detected" << endl;
+        // cout << which_sound << " detected" << endl;
 
         vec_change[id].play();
     }
@@ -179,9 +175,13 @@ void Sound::play_engine(int active_vec, vector<float> &controls)
     // engine.play();
 
     float e = controls[active_vec];
-    float m = ofMap(e,-1,1,0,engine.size()-1);
-    engine[m].play();
-
+    int m = ofMap(e, -1, 1, 0, engine.size() - 1);
+    // so it doesnt play same engine sound twice
+    if (last_engine != m)
+    {
+        engine[m].play();
+        last_engine = m;
+    }
 }
 
 void Sound::set_proximity(float dist, float max_dist)
@@ -210,18 +210,17 @@ void Sound::set_proximity(float dist, float max_dist)
     }
 
     //cout << "new distance " << normalized << endl;
-    
-    if(proximity_level != prev_proximity_level)
+
+    if (proximity_level != prev_proximity_level)
     {
         proximity.load("sounds/hot_sounds/hot" + ofToString(proximity_level) + ".wav");
         proximity.setLoop(true);
         proximity.setVolume(.3);
         proximity.play();
-        cout << "new proximity level " << proximity_level << endl;
+        // cout << "new proximity level " << proximity_level << endl;
 
         // should reset this ^ at beginning of every match ?
         prev_proximity_level = proximity_level;
-        
     }
 }
 void Sound::draw()

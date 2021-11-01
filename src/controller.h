@@ -36,7 +36,7 @@ public:
     // drawing vector readouts
     vector<VecDisplay> vec_displays;
     float controls_start_x = 20;
-    float controls_start_y = 162 + 186; // was 162
+    float controls_start_y = 348; // was 162
     float controls_dim_x = 408;
     float controls_dim_y = 408; // was 700
     float control_dim_x = controls_dim_x/4;
