@@ -15,6 +15,7 @@ public:
     vector<ofSoundPlayer> engine;
     // vector<ofSoundPlayer> proximity;
     ofSoundPlayer proximity;
+    // vector<ofSoundPlayer> proximity_array;
     vector<ofSoundPlayer> vec_change;
 
     // endgame

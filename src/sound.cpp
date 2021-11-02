@@ -27,13 +27,22 @@ void Sound::setup()
         vec_change.push_back(osp);
     }
 
+    // proximity sounds
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     ofSoundPlayer osp;
+    //     string fn = "data/sounds/hot_sounds/hot" + ofToString(i) + ".wav";
+    //     osp.load(fn);
+    //     proximity_array.push_back(osp);
+    // }
+
     // load in engine sounds
     for (int i = 0; i < 64; i++)
     {
         ofSoundPlayer osp;
         string fn = "data/sounds/engine/engine_" + ofToString(i) + ".wav";
         osp.load(fn);
-        osp.setVolume(.3);
+        osp.setVolume(.18);
         osp.setMultiPlay(true);
         engine.push_back(osp);
     }
@@ -73,6 +82,11 @@ void Sound::update()
 
         // kill proximity alarms
         proximity.stop();
+        // proximity sounds
+        // for (int i = 0; i < 5; i++)
+        // {
+        //     proximity_array[i].stop();
+        // }
     }
 
     // fade in menu music
@@ -120,6 +134,12 @@ void Sound::game_start()
     game_music.play();
     game_music_fading_in = true;
     game_music_started_fade = ofGetElapsedTimeMillis();
+
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     proximity_array[i].play();
+    //     proximity_array[i].setVolume(0);
+    // }
 }
 
 void Sound::game_end()
@@ -213,11 +233,17 @@ void Sound::set_proximity(float dist, float max_dist)
 
     if (proximity_level != prev_proximity_level)
     {
+        // for (int i = 0; i < 5; i++)
+        // {
+        //     proximity_array[i].setVolume(0);
+        //     proximity_array[i].play();
+        // }
+        // proximity_array[proximity_level].setVolume(.25);
+
         proximity.load("sounds/hot_sounds/hot" + ofToString(proximity_level) + ".wav");
-        proximity.setLoop(true);
+        // proximity.setLoop(true);
         proximity.setVolume(.3);
         proximity.play();
-        // cout << "new proximity level " << proximity_level << endl;
 
         // should reset this ^ at beginning of every match ?
         prev_proximity_level = proximity_level;
