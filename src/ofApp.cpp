@@ -9,6 +9,7 @@ void ofApp::setup()
     // ofSetWindowShape(img_dims, img_dims);
     ofSetBackgroundAuto(false);
     ofDisableArbTex(); // important for texture mapping
+     ofHideCursor();
 
     ofTrueTypeFontSettings settings("fonts/ContrailOne-Regular.ttf", 48);
     font_menu.load(settings);
