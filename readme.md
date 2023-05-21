@@ -10,6 +10,7 @@ git clone https://github.com/bakercp/ofxNetworkUtils.git
 git clone https://github.com/bakercp/ofxSSLManager.git
 git clone https://github.com/bakercp/ofxSerial.git
 git clone https://github.com/mneunomne/ofxGLFWJoystick.git
+git clone https://github.com/danomatika/ofxMidi.git
 ```
 
 # Running local in develop mode on runway
