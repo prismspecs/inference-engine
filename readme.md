@@ -13,6 +13,13 @@ git clone https://github.com/mneunomne/ofxGLFWJoystick.git
 git clone https://github.com/danomatika/ofxMidi.git
 ```
 
+# OpenFrameworks bugs
+OF is riddled with bugs nowadays. In particular, this is an important fix re: Poco
+[Link to discussion](https://github.com/openframeworks/openFrameworks/issues/6041)
+
+The essential steps are to go into ofxPoco/addon_config.mk file and comment out ADDON_INCLUDES line, then remove or rename the /libs folder in ofxPoco as well
+then ```make clean```
+
 # Running local in develop mode on runway
 
 Build the docker from Dockerfile
