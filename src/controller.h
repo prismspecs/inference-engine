@@ -31,7 +31,7 @@ public:
     int num_control_vecs = 16;
     int num_controls_root;
     int active_vec = 0;
-    float vector_speed = .01;
+    float vector_speed = .01;  // was .01
 
     // drawing vector readouts
     vector<VecDisplay> vec_displays;

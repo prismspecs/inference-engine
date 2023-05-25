@@ -19,7 +19,7 @@ public:
     ofMesh mesh;
     float speed = 8; // was 10
 
-    float alpha = 100;  // was 255
+    float alpha = 70;  // was 100
     float alphaDrain = 6;   // was 4
     float scale = 512;
 };
