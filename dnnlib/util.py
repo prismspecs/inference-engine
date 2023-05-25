@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+﻿# Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -75,8 +75,10 @@ class Logger(object):
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         self.close()
 
-    def write(self, text: str) -> None:
+    def write(self, text: Union[str, bytes]) -> None:
         """Write text to stdout (and a file) and optionally flush."""
+        if isinstance(text, bytes):
+            text = text.decode()
         if len(text) == 0: # workaround for a bug in VSCode debugger: sys.stdout.write(''); sys.stdout.flush() => crash
             return
 
@@ -107,6 +109,7 @@ class Logger(object):
 
         if self.file is not None:
             self.file.close()
+            self.file = None
 
 
 # Cache directories
@@ -145,6 +148,20 @@ def format_time(seconds: Union[int, float]) -> str:
         return "{0}h {1:02}m {2:02}s".format(s // (60 * 60), (s // 60) % 60, s % 60)
     else:
         return "{0}d {1:02}h {2:02}m".format(s // (24 * 60 * 60), (s // (60 * 60)) % 24, (s // 60) % 60)
+
+
+def format_time_brief(seconds: Union[int, float]) -> str:
+    """Convert the seconds to human readable string with days, hours, minutes and seconds."""
+    s = int(np.rint(seconds))
+
+    if s < 60:
+        return "{0}s".format(s)
+    elif s < 60 * 60:
+        return "{0}m {1:02}s".format(s // 60, s % 60)
+    elif s < 24 * 60 * 60:
+        return "{0}h {1:02}m".format(s // (60 * 60), (s // 60) % 60)
+    else:
+        return "{0}d {1:02}h".format(s // (24 * 60 * 60), (s // (60 * 60)) % 24)
 
 
 def ask_yes_no(question: str) -> bool:
@@ -447,6 +464,8 @@ def open_url(url: str, cache_dir: str = None, num_attempts: int = 10, verbose: b
                     if verbose:
                         print(" done")
                     break
+            except KeyboardInterrupt:
+                raise
             except:
                 if not attempts_left:
                     if verbose:

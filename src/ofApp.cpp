@@ -9,7 +9,7 @@ void ofApp::setup()
     // ofSetWindowShape(img_dims, img_dims);
     ofSetBackgroundAuto(false);
     ofDisableArbTex(); // important for texture mapping
-     ofHideCursor();
+    ofHideCursor();
 
     ofTrueTypeFontSettings settings("fonts/ContrailOne-Regular.ttf", 48);
     font_menu.load(settings);
@@ -65,7 +65,7 @@ void ofApp::setup()
     sound.menu_start();
 
     // setup Runway
-    runway.setup(this, "http://localhost:8000");
+    runway.setup(this, "http://localhost:9000");
     runway.start();
 
     // setup tutorial
@@ -105,7 +105,6 @@ void ofApp::update()
         // cout << "serial received " << myByte << endl;
         controller.receive_serial(myByte);
     }
-
 
     // update controller
     controller.update();
@@ -340,7 +339,7 @@ void ofApp::draw()
         // draw target location image
         if (targetImg.isAllocated())
         {
-            //targetImg.draw(img_dims, 0);
+            // targetImg.draw(img_dims, 0);
 
             // draw to fbo instead and integrate into HUD
             targetFbo.begin();
@@ -548,7 +547,7 @@ void ofApp::receive_button(string &button)
             sound.play_once("menu_select");
             if (menu_selection == 0)
             {
-                //GAME_STATE = PLAYING;
+                // GAME_STATE = PLAYING;
                 menu_fadestartedtime = ofGetElapsedTimeMillis();
                 menu_startfade = true;
             }
@@ -559,7 +558,6 @@ void ofApp::receive_button(string &button)
                 tutorial_vid.setPosition(0);
                 tutorial_vid.firstFrame();
                 tutorial_vid.play();
-                
             }
         }
         else if (GAME_STATE == HELP_SCREEN)
@@ -678,7 +676,7 @@ void ofApp::warp_effect(ofTexture &texture, ofVec3f location)
     warps.push_back(iw);
 
     // find the oldest warp that isn't yet flying
-    //warps[warps.size() - 2].fly = true;
+    // warps[warps.size() - 2].fly = true;
 }
 //--------------------------------------------------------------
 vector<float> ofApp::generate_random_z()
@@ -885,7 +883,7 @@ void ofApp::draw_centered_text(string str, ofColor color, float offset)
 // ofRect(1492, 584, 408, 408);
 
 // plain text distance number
-//ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
+// ofRectangle r(ofGetWidth() / 2 - 50, ofGetHeight() - 30, 100, 20);
 
 // ofSetColor(80);
 // ofDrawRectangle(r);
@@ -896,14 +894,14 @@ void ofApp::draw_centered_text(string str, ofColor color, float offset)
 // ofDrawBitmapString(diststr, r.getBottomLeft() + glm::vec3(0, 2, 0));
 
 // background for meter
-//ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
+// ofRectangle distance_bg(10, ofGetHeight() - 40, ofGetWidth() - 20, 20);
 // ofRectangle distance_bg(r.x + 10, r.y - 20, r.width - 20, 20);
 
 // float mapped_dist = ofMap(distance, max_dist, 0, distance_bg.x, distance_bg.x + distance_bg.width);
 
 // ofRectangle distance_meter(distance_bg.x, distance_bg.y, mapped_dist, distance_bg.height);
 // ofSetColor(0);
-//ofDrawRectangle(distance_bg);
+// ofDrawRectangle(distance_bg);
 // ofSetColor(255);
 // ofDrawRectangle(distance_meter);
 

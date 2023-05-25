@@ -6,4 +6,5 @@
 update_lib.sh
 config.make
 /checkpoints/
+*.pkl
 core

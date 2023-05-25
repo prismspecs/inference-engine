@@ -5,6 +5,5 @@ ofxNetworkUtils
 ofxSSLManager
 ofxRunway
 ofxGui
-ofxMidi
 ofxGLFWJoystick
 ofxSerial

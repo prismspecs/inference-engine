@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.5.2/dist/tf.min.js"></script>
+
+    <meta charset="utf-8">
+    <title></title>
+
+    <style>
+
+    </style>
+</head>
+
+<body>
+
+    <!-- <a href="#" id="click_gen">click</a> -->
+
+    <div class="slidecontainer">
+        <input type="range" min="0" max="3" value="1" step=".1" class="slider" id="truncation">
+    </div>
+
+    <button id="button">Randomize and Send</button>
+
+    <img id="image_output" src="" style="float:right">
+
+    <script>
+        //var gen_model = undefined;
+
+        async function Load() {
+
+            const dims = 512;
+
+            var z = [];
+            var truncation = 1;
+
+            // create sliders with which to control the input tensor
+            function CreateSliders() {
+                for (var i = 0; i < dims; i++) {
+                    var slider = document.createElement('input');
+                    slider.id = "slider_" + i;
+                    slider.type = 'range';
+                    slider.min = -1;
+                    slider.max = 1;
+                    slider.value = 0;
+                    slider.step = 0.01;
+                    document.body.appendChild(slider);
+
+                    // add event listeners for when they are changed
+                    slider.addEventListener("input", function(e) {
+
+                        // get id of slider used as number
+                        var num = parseInt(this.id.replace("slider_", ""));
+
+                        // for some reason slider_0 was giving a string value??
+                        z[num] = parseFloat(this.value);
+
+                        SendRequest();
+
+                    });
+                }
+                document.body.appendChild(document.createElement('br'));
+            }
+
+            function RandomizeSliders() {
+
+                for (var i = 0; i < dims; i++) {
+                    var el = document.getElementById("slider_" + i);
+                    el.value = Math.random() * (1 - -1) + -1;
+                    z[i] = el.value;
+                    //console.log(el.value);
+                }
+            }
+
+            function SendRequest() {
+                // construct an HTTP request
+                var xhr = new XMLHttpRequest();
+
+                // upon successful completion of request...
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState == XMLHttpRequest.DONE) {
+                        var json = JSON.parse(xhr.responseText);
+                        // console.log(json);
+                        // $('#image_output').attr('src', json.image);
+                        document.getElementById("image_output").src = "data:image/jpeg;base64," + json.image;
+
+                    }
+                }
+
+
+                xhr.open("POST", "http://localhost:9000/query");
+                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+
+                // send the collected data as JSON
+                xhr.send(JSON.stringify({
+                    'z': z,
+                    'truncation': parseFloat(truncation),
+                }));
+
+                // console.log(JSON.stringify({
+                //     'z': z
+                // }));
+            }
+
+            CreateSliders();
+            RandomizeSliders();
+
+            // Will execute myCallback every 0.5 seconds
+            // var intervalID = window.setInterval(RandomSend, 250);
+
+            function RandomSend() {
+                RandomizeSliders();
+                SendRequest();
+            }
+
+            $("#button").click(function() {
+                RandomSend();
+            });
+
+            document.getElementById("truncation").oninput = function() {
+                truncation = this.value;
+                SendRequest();
+                // console.log("truncation is " + truncation);
+            }
+        }
+
+        Load();
+    </script>
+
+
+</body>
+
+</html>
