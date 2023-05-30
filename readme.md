@@ -25,6 +25,16 @@ https://github.com/fred-dev/ofxIO/commit/f1e96d278ac6940291509e8f1e75506789ad921
 and https://github.com/fred-dev/ofxHTTP
 these are reflected in the addons git clones above
 
+# Serial bugs
+
+On Ubuntu, I had to
+
+```
+sudo usermod -a -G dialout <username>
+sudo apt remove brltty 
+```
+
+
 # Running local in develop mode on runway
 
 Build the docker from Dockerfile
